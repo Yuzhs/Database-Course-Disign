@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>工单管理 - 智慧能源管理系统</title>
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- DataTables -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
+    <style>
+        :root {
+            --primary: #667eea;
+            --secondary: #764ba2;
+        }
+        body {
+            background-color: #f8f9fa;
+        }
+        .sidebar {
+            background: linear-gradient(180deg, var(--primary) 0%, var(--secondary) 100%);
+            min-height: 100vh;
+            color: white;
+            position: fixed;
+            width: 250px;
+        }
+        .sidebar-header {
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .nav-link {
+            color: rgba(255,255,255,0.8);
+            padding: 12px 20px;
+            margin: 5px 10px;
+            border-radius: 10px;
+            transition: all 0.3s;
+        }
+        .nav-link:hover, .nav-link.active {
+            color: white;
+            background: rgba(255,255,255,0.1);
+        }
+        .nav-link i {
+            width: 24px;
+            text-align: center;
+            margin-right: 10px;
+        }
+        .main-content {
+            margin-left: 250px;
+            padding: 20px;
+        }
+        .page-header {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+        .work-order-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+            transition: all 0.3s;
+        }
+        .work-order-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        .order-status {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .status-pending { background: #fff3cd; color: #856404; }
+        .status-in-progress { background: #d1ecf1; color: #0c5460; }
+        .status-completed { background: #d4edda; color: #155724; }
+        .order-priority {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        .priority-high { background: #f8d7da; color: #721c24; }
+        .priority-medium { background: #fff3cd; color: #856404; }
+        .priority-low { background: #d1ecf1; color: #0c5460; }
+        .order-detail {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .filter-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            background: white;
+            padding: 15px;
+            border-radius: 15px;
+        }
+        .filter-tab {
+            padding: 8px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+        .filter-tab.active {
+            background: var(--primary);
+            color: white;
+        }
+        .filter-tab:hover:not(.active) {
+            border-color: var(--primary);
+        }
+        @media (max-width: 768px) {
+            .sidebar {
+                margin-left: -250px;
+            }
+            .main-content {
+                margin-left: 0;
+            }
+            .sidebar.active {
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 侧边栏 -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <i class="fas fa-bolt fa-2x mb-2"></i>
+            <h5>能源管理系统</h5>
+            <small>运维版</small>
+        </div>
+        <nav class="nav flex-column mt-3">
+            <a class="nav-link active" href="/operation/dashboard">
+                <i class="fas fa-tachometer-alt"></i> 仪表板
+            </a>
+            <a class="nav-link" href="/operation/work_orders">
+                <i class="fas fa-clipboard-list"></i> 工单管理
+                <span class="badge bg-danger float-end" id="pendingBadge">0</span>
+            </a>
+            <a class="nav-link" href="/operation/equipment">
+                <i class="fas fa-cogs"></i> 设备管理
+            </a>
+            <a class="nav-link" href="/operation/alerts">
+                <i class="fas fa-exclamation-triangle"></i> 告警管理
+                <span class="badge bg-danger float-end" id="alertBadge">0</span>
+            </a>
+            <a class="nav-link" href="/operation/profile">
+                <i class="fas fa-user-circle"></i> 个人中心
+            </a>
+            <div class="mt-auto">
+                <a class="nav-link text-danger" href="#" id="logoutBtn">
+                    <i class="fas fa-sign-out-alt"></i> 退出登录
+                </a>
+            </div>
+        </nav>
+    </div>
+
+    <!-- 主内容区 -->
+    <div class="main-content" id="mainContent">
+        <!-- 页面标题 -->
+        <div class="page-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2><i class="fas fa-clipboard-list me-2"></i>工单管理</h2>
+                    <p class="text-muted mb-0">查看和处理运维工单</p>
+                </div>
+                <div>
+                    <button class="btn btn-primary" onclick="refreshWorkOrders()">
+                        <i class="fas fa-sync-alt"></i> 刷新
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 筛选标签 -->
+        <div class="filter-tabs">
+            <div class="filter-tab active" data-status="all" onclick="filterWorkOrders('all')">
+                全部工单
+            </div>
+            <div class="filter-tab" data-status="pending" onclick="filterWorkOrders('pending')">
+                待处理 <span class="badge bg-danger ms-1" id="pendingCount">0</span>
+            </div>
+            <div class="filter-tab" data-status="in-progress" onclick="filterWorkOrders('in-progress')">
+                处理中 <span class="badge bg-warning ms-1" id="inProgressCount">0</span>
+            </div>
+            <div class="filter-tab" data-status="completed" onclick="filterWorkOrders('completed')">
+                已完成 <span class="badge bg-success ms-1" id="completedCount">0</span>
+            </div>
+        </div>
+
+        <!-- 工单列表 -->
+        <div id="workOrdersList">
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">加载中...</span>
+                </div>
+                <p class="mt-3">正在加载工单数据...</p>
+            </div>
+        </div>
+
+        <!-- 完成工单模态框 -->
+        <div class="modal fade" id="completeModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">完成工单</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">工单编号</label>
+                            <input type="text" class="form-control" id="completeOrderId" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">处理结果 <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="completeResult" rows="4"
+                                      placeholder="请详细描述处理过程和结果..." required></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">附件（可选）</label>
+                            <input type="file" class="form-control" id="completeAttachment">
+                            <small class="text-muted">可上传现场照片、维修报告等文件</small>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                        <button type="button" class="btn btn-primary" onclick="submitCompleteOrder()">提交</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // API基础URL
+        const API_BASE = 'http://localhost:5001/api';
+
+        // 全局变量
+        let allWorkOrders = [];
+        let currentFilter = 'all';
+
+        // 检查登录状态
+        checkLogin();
+
+        // 侧边栏切换
+        document.getElementById('sidebarToggle')?.addEventListener('click', function() {
+            document.getElementById('sidebar').classList.toggle('active');
+        });
+
+        // 退出登录
+        document.getElementById('logoutBtn').addEventListener('click', logout);
+
+        // 加载工单数据
+        loadWorkOrders();
+
+        // 函数定义
+        // 替换原来的 checkLogin 函数
+function checkLogin() {
+    verifyLogin();
+}
+
+async function verifyLogin() {
+    try {
+        const response = await fetch('/api/check-login', {
+            method: 'GET',
+            credentials: 'include'
+        });
+
+        if (!response.ok) {
+            window.location.href = '/login';
+            return;
+        }
+
+        const result = await response.json();
+
+        if (result.success) {
+            // 已登录，可以继续加载页面数据
+            console.log('用户已登录:', result.data.real_name);
+
+            // 根据页面需要，可能还要更新用户信息显示
+            if (document.getElementById('userName')) {
+                document.getElementById('userName').textContent = result.data.real_name || '运维人员';
+            }
+            if (document.getElementById('userRealName')) {
+                document.getElementById('userRealName').textContent = result.data.real_name || '运维人员';
+            }
+
+            return result.data; // 返回用户信息，供后续使用
+        } else {
+            window.location.href = '/login';
+            return null;
+        }
+    } catch (error) {
+        console.error('检查登录状态失败:', error);
+        window.location.href = '/login';
+        return null;
+    }
+}
+
+        async function loadWorkOrders() {
+            try {
+                showLoading(true);
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${API_BASE}/operation/work-orders`, {
+                    headers: { 'Authorization': token }
+                });
+
+                if (response.status === 401) {
+                    localStorage.clear();
+                    window.location.href = 'index.html';
+                    return;
+                }
+
+                const result = await response.json();
+
+                if (result.success) {
+                    allWorkOrders = result.data;
+                    console.log(`✅ 加载了 ${allWorkOrders.length} 个工单`);
+
+                    // 调试：显示每个工单的状态
+                    allWorkOrders.forEach((order, index) => {
+                        console.log(`工单${index+1}: ID=${order.工单ID}, 响应时间=${order.响应时间 ? '有' : '无'}, 完成时间=${order.处理完成时间 ? '有' : '无'}`);
+                    });
+
+                    updateCounters();
+                    renderWorkOrders();
+                    await updateAlertBadge();
+                    showMessage('数据加载成功', 'success');
+                } else {
+                    showError('加载工单失败: ' + (result.message || '未知错误'));
+                }
+            } catch (error) {
+                console.error('加载工单失败:', error);
+                showError('网络错误，请检查连接: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function showLoading(loading) {
+            const container = document.getElementById('workOrdersList');
+            if (loading) {
+                container.innerHTML = `
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">加载中...</span>
+                    </div>
+                    <p class="mt-3">正在加载工单数据...</p>
+                </div>
+                `;
+            }
+        }
+
+        function updateCounters() {
+            console.log('🔍 更新计数器，总工单数:', allWorkOrders.length);
+
+            // 更精确的状态判断
+            const pending = allWorkOrders.filter(o =>
+                !o.处理完成时间 && !o.响应时间
+            ).length;
+
+            const inProgress = allWorkOrders.filter(o =>
+                o.响应时间 && !o.处理完成时间
+            ).length;
+
+            const completed = allWorkOrders.filter(o =>
+                o.处理完成时间
+            ).length;
+
+            console.log(`📊 状态统计: 待处理=${pending}, 处理中=${inProgress}, 已完成=${completed}`);
+
+            // 更新所有计数器
+            document.getElementById('pendingBadge').textContent = pending;
+            document.getElementById('pendingCount').textContent = pending;
+            document.getElementById('inProgressCount').textContent = inProgress;
+            document.getElementById('completedCount').textContent = completed;
+        }
+
+        function filterWorkOrders(status) {
+            currentFilter = status;
+
+            // 更新标签状态
+            document.querySelectorAll('.filter-tab').forEach(tab => {
+                tab.classList.remove('active');
+                if (tab.dataset.status === status) {
+                    tab.classList.add('active');
+                }
+            });
+
+            renderWorkOrders();
+        }
+
+        function renderWorkOrders() {
+            let filteredOrders = [...allWorkOrders];
+
+            // 根据筛选条件过滤
+            if (currentFilter === 'pending') {
+                filteredOrders = filteredOrders.filter(o => !o.处理完成时间 && !o.响应时间);
+            } else if (currentFilter === 'in-progress') {
+                filteredOrders = filteredOrders.filter(o => o.响应时间 && !o.处理完成时间);
+            } else if (currentFilter === 'completed') {
+                filteredOrders = filteredOrders.filter(o => o.处理完成时间);
+            }
+
+            const container = document.getElementById('workOrdersList');
+
+            if (filteredOrders.length === 0) {
+                container.innerHTML = `
+                <div class="text-center py-5">
+                    <i class="fas fa-clipboard-check fa-3x text-muted mb-3"></i>
+                    <h4 class="text-muted">暂无工单</h4>
+                    <p class="text-muted">当前筛选条件下没有工单记录</p>
+                </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            filteredOrders.forEach(order => {
+                html += createWorkOrderCard(order);
+            });
+
+            container.innerHTML = html;
+        }
+
+        function createWorkOrderCard(order) {
+            // 确定状态和样式
+            let statusText, statusClass, priorityClass;
+
+            if (order.处理完成时间) {
+                statusText = '已完成';
+                statusClass = 'status-completed';
+            } else if (order.响应时间) {
+                statusText = '处理中';
+                statusClass = 'status-in-progress';
+            } else {
+                statusText = '待处理';
+                statusClass = 'status-pending';
+            }
+
+            // 确定优先级样式
+            if (order.告警等级 === '高') {
+                priorityClass = 'priority-high';
+            } else if (order.告警等级 === '中') {
+                priorityClass = 'priority-medium';
+            } else {
+                priorityClass = 'priority-low';
+            }
+
+            // 格式化时间
+            const assignTime = new Date(order.派单时间).toLocaleString('zh-CN');
+            const responseTime = order.响应时间 ?
+                new Date(order.响应时间).toLocaleString('zh-CN') : '未响应';
+            const completeTime = order.处理完成时间 ?
+                new Date(order.处理完成时间).toLocaleString('zh-CN') : '未完成';
+
+            return `
+            <div class="work-order-card">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <h5 class="mb-1">
+                            ${order.工单编号}
+                            <span class="order-status ${statusClass}">${statusText}</span>
+                            <span class="order-priority ${priorityClass}">${order.告警等级}级告警</span>
+                        </h5>
+                        <p class="text-muted mb-0">设备：${order.设备名称 || '未知设备'}</p>
+                    </div>
+                    <div class="text-end">
+                        <small class="text-muted">派单时间：${assignTime}</small>
+                    </div>
+                </div>
+
+                <div class="order-detail">
+                    <p class="mb-2"><strong>告警内容：</strong>${order.告警内容}</p>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <small class="text-muted">响应时间：${responseTime}</small>
+                        </div>
+                        <div class="col-md-4">
+                            <small class="text-muted">完成时间：${completeTime}</small>
+                        </div>
+                        <div class="col-md-4">
+                            <small class="text-muted">处理时长：${order.处理耗时 || '-'}分钟</small>
+                        </div>
+                    </div>
+                    ${order.处理结果 ? `
+                    <div class="mt-3">
+                        <strong>处理结果：</strong>
+                        <p class="mb-0">${order.处理结果}</p>
+                    </div>
+                    ` : ''}
+                </div>
+
+                <div class="action-buttons">
+                    ${!order.响应时间 ? `
+                    <button class="btn btn-primary btn-sm" onclick="respondToOrder('${order.工单ID}')">
+                        <i class="fas fa-play me-1"></i> 开始处理
+                    </button>
+                    ` : ''}
+
+                    ${order.响应时间 && !order.处理完成时间 ? `
+                    <button class="btn btn-success btn-sm" onclick="showCompleteModal('${order.工单ID}', '${order.工单编号}')">
+                        <i class="fas fa-check me-1"></i> 完成工单
+                    </button>
+                    ` : ''}
+
+                    ${order.处理完成时间 ? `
+                    <button class="btn btn-outline-secondary btn-sm" disabled>
+                        <i class="fas fa-check-circle me-1"></i> 已完成
+                    </button>
+                    ` : ''}
+
+                    <button class="btn btn-outline-info btn-sm ms-auto"
+                            onclick="viewOrderDetail('${order.工单ID}')">
+                        <i class="fas fa-info-circle me-1"></i> 详情
+                    </button>
+                </div>
+            </div>
+            `;
+        }
+
+        async function respondToOrder(orderId) {
+            if (!confirm('确认开始处理该工单？')) return;
+
+            console.log(`🔄 响应工单: ${orderId}`);
+
+            try {
+                const token = localStorage.getItem('token');
+                console.log(`🔍 请求URL: ${API_BASE}/operation/work-orders/${orderId}/respond`);
+
+                const response = await fetch(`${API_BASE}/operation/work-orders/${orderId}/respond`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': token,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                console.log(`🔍 响应状态: ${response.status}`);
+
+                const result = await response.json();
+                console.log(`🔍 响应结果:`, result);
+
+                if (result.success) {
+                    showMessage('响应成功，工单状态已更新为"处理中"', 'success');
+
+                    // 立即更新本地数据，而不是等待重新加载
+                    const updatedOrderIndex = allWorkOrders.findIndex(o => o.工单ID === orderId);
+                    if (updatedOrderIndex !== -1) {
+                        // 模拟更新响应时间
+                        allWorkOrders[updatedOrderIndex].响应时间 = new Date().toISOString();
+                        console.log(`✅ 本地数据已更新，工单 ${orderId} 现在有响应时间`);
+
+                        // 立即更新UI
+                        updateCounters();
+                        renderWorkOrders();
+                        await updateAlertBadge();
+                    } else {
+                        // 如果找不到，重新加载所有数据
+                        loadWorkOrders();
+                    }
+                } else {
+                    showMessage(result.message || '响应失败', 'danger');
+                }
+            } catch (error) {
+                console.error('响应工单失败:', error);
+                showMessage('网络错误，请重试', 'danger');
+            }
+        }
+
+        function showCompleteModal(orderId, orderNumber) {
+            document.getElementById('completeOrderId').value = orderNumber;
+            document.getElementById('completeOrderId').dataset.orderId = orderId;
+            document.getElementById('completeResult').value = '';
+
+            const modal = new bootstrap.Modal(document.getElementById('completeModal'));
+            modal.show();
+        }
+
+        async function submitCompleteOrder() {
+            const orderId = document.getElementById('completeOrderId').dataset.orderId;
+            const orderNumber = document.getElementById('completeOrderId').value;
+            const result = document.getElementById('completeResult').value.trim();
+
+            console.log(`🔄 提交完成工单: ID=${orderId}, 编号=${orderNumber}`);
+            console.log(`🔍 处理结果: ${result}`);
+
+            if (!result) {
+                showMessage('请输入处理结果', 'warning');
+                return;
+            }
+
+            try {
+                const token = localStorage.getItem('token');
+                const requestData = { result: result };
+
+                console.log(`🔍 请求URL: ${API_BASE}/operation/work-orders/${orderId}/complete`);
+                console.log(`🔍 请求数据:`, requestData);
+
+                const response = await fetch(`${API_BASE}/operation/work-orders/${orderId}/complete`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestData)
+                });
+
+                console.log(`🔍 响应状态: ${response.status}`);
+                console.log(`🔍 响应头:`, Object.fromEntries(response.headers.entries()));
+
+                const data = await response.json();
+                console.log(`🔍 响应数据:`, data);
+
+                if (data.success) {
+                    showMessage('工单完成成功', 'success');
+
+                    // 关闭模态框
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('completeModal'));
+                    if (modal) modal.hide();
+
+                    // 更新本地数据
+                    const updatedOrderIndex = allWorkOrders.findIndex(o => o.工单ID === orderId);
+                    if (updatedOrderIndex !== -1) {
+                        allWorkOrders[updatedOrderIndex].处理完成时间 = new Date().toISOString();
+                        allWorkOrders[updatedOrderIndex].处理结果 = result;
+                        console.log(`✅ 本地数据已更新`);
+
+                        // 立即更新UI
+                        updateCounters();
+                        renderWorkOrders();
+                        await updateAlertBadge();
+                    } else {
+                        loadWorkOrders();
+                    }
+                } else {
+                    showMessage(data.message || '操作失败: ' + (data.details || ''), 'danger');
+                }
+            } catch (error) {
+                console.error('完成工单失败:', error);
+                showMessage('网络错误: ' + error.message, 'danger');
+            }
+        }
+
+        function viewOrderDetail(orderId) {
+            // 这里可以跳转到详情页或显示详情模态框
+            const order = allWorkOrders.find(o => o.工单ID === orderId);
+            if (order) {
+                alert(`工单详情：
+编号：${order.工单编号}
+告警：${order.告警内容}
+设备：${order.设备名称 || '未知'}
+状态：${order.处理完成时间 ? '已完成' : order.响应时间 ? '处理中' : '待处理'}
+处理结果：${order.处理结果 || '暂无'}
+                `);
+            }
+        }
+
+        function refreshWorkOrders() {
+            loadWorkOrders();
+            showMessage('正在刷新数据...', 'info');
+        }
+
+        async function logout() {
+            try {
+                const token = localStorage.getItem('token');
+                await fetch(`${API_BASE}/logout`, {
+                    method: 'POST',
+                    headers: { 'Authorization': token }
+                });
+            } catch (error) {
+                console.error('退出登录失败:', error);
+            } finally {
+                localStorage.clear();
+                window.location.href = '/login';
+            }
+        }
+
+        function showMessage(message, type = 'info') {
+            // 创建临时消息提示
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+            alert.style.cssText = `
+                top: 20px;
+                right: 20px;
+                z-index: 9999;
+                min-width: 300px;
+            `;
+            alert.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+
+            document.body.appendChild(alert);
+
+            // 5秒后自动移除
+            setTimeout(() => {
+                alert.remove();
+            }, 5000);
+        }
+
+        function showError(message) {
+            const container = document.getElementById('workOrdersList');
+            container.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                ${message}
+                <button class="btn btn-sm btn-outline-danger float-end" onclick="loadWorkOrders()">
+                    重试
+                </button>
+            </div>
+            `;
+        }
+
+        // 通用函数 - 更新告警徽章
+        async function updateAlertBadge() {
+            try {
+                const token = localStorage.getItem('token');
+
+                // 获取未处理的告警数量
+                const response = await fetch(`${API_BASE}/alert-badge`, {
+                    headers: { 'Authorization': token }
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    const count = result.count || 0;
+
+                    // 更新所有页面中的告警徽章
+                    const badges = document.querySelectorAll('#alertBadge, .alert-badge');
+                    badges.forEach(badge => {
+                        badge.textContent = count;
+                        badge.style.display = count > 0 ? 'inline' : 'none';
+                    });
+
+                    return count;
+                }
+                return 0;
+            } catch (error) {
+                console.error('更新告警徽章失败:', error);
+                return 0;
+            }
+        }
+
+        // 页面加载时更新告警徽章
+        document.addEventListener('DOMContentLoaded', function() {
+            updateAlertBadge();
+
+            // 设置定期更新（每30秒）
+            setInterval(updateAlertBadge, 30000);
+
+            // 页面获得焦点时更新
+            document.addEventListener('visibilitychange', function() {
+                if (!document.hidden) {
+                    updateAlertBadge();
+                }
+            });
+        });
+    </script>
+</body>
+</html>

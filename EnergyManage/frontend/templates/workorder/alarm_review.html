@@ -1,0 +1,328 @@
+{% extends "workorder/base.html" %}
+
+{% block title %}告警审核{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">告警审核</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <button class="btn btn-sm btn-outline-secondary me-2" data-bs-toggle="modal" data-bs-target="#filterModal">
+            <i class="bi bi-funnel"></i> 筛选
+        </button>
+        <button class="btn btn-sm btn-primary" onclick="refreshAlarms()">
+            <i class="bi bi-arrow-clockwise"></i> 刷新
+        </button>
+    </div>
+</div>
+
+<!-- 告警统计 -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-danger">
+            <div class="card-body">
+                <h6 class="card-title">高级告警</h6>
+                <h2 class="card-text">
+                    {% for stat in alarm_stats %}
+                        {% if stat.告警等级 == '高' %}{{ stat.pending }}{% endif %}
+                    {% endfor %}
+                </h2>
+                <small class="text-white-50">待处理</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning">
+            <div class="card-body">
+                <h6 class="card-title">中级告警</h6>
+                <h2 class="card-text">
+                    {% for stat in alarm_stats %}
+                        {% if stat.告警等级 == '中' %}{{ stat.pending }}{% endif %}
+                    {% endfor %}
+                </h2>
+                <small class="text-white-50">待处理</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-info">
+            <div class="card-body">
+                <h6 class="card-title">低级告警</h6>
+                <h2 class="card-text">
+                    {% for stat in alarm_stats %}
+                        {% if stat.告警等级 == '低' %}{{ stat.pending }}{% endif %}
+                    {% endfor %}
+                </h2>
+                <small class="text-white-50">待处理</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <h6 class="card-title">已处理</h6>
+                <h2 class="card-text">
+                    {% set total_resolved = 0 %}
+                    {% for stat in alarm_stats %}
+                        {% set total_resolved = total_resolved + stat.resolved %}
+                    {% endfor %}
+                    {{ total_resolved }}
+                </h2>
+                <small class="text-white-50">已结案</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 告警列表 -->
+<div class="card">
+    <div class="card-header">
+        <i class="bi bi-list-ul"></i> 告警列表
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover" id="alarmTable">
+                <thead>
+                    <tr>
+                        <th>告警编号</th>
+                        <th>告警类型</th>
+                        <th>告警等级</th>
+                        <th>发生时间</th>
+                        <th>处理状态</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for alarm in alarms %}
+                    <tr class="{% if alarm.告警等级 == '高' %}table-danger{% elif alarm.告警等级 == '中' %}table-warning{% else %}table-info{% endif %}">
+                        <td>{{ alarm.告警编号 }}</td>
+                        <td>{{ alarm.告警类型 }}</td>
+                        <td>
+                            <span class="badge {% if alarm.告警等级 == '高' %}bg-danger{% elif alarm.告警等级 == '中' %}bg-warning{% else %}bg-info{% endif %}">
+                                {{ alarm.告警等级 }}
+                            </span>
+                        </td>
+                        <td>{{ alarm.发生时间.strftime('%Y-%m-%d %H:%M:%S') if alarm.发生时间 else '' }}</td>
+                        <td>
+                            <span class="badge {% if alarm.处理状态 == '未处理' %}bg-warning{% elif alarm.处理状态 == '处理中' %}bg-info{% else %}bg-success{% endif %}">
+                                {{ alarm.处理状态 }}
+                            </span>
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-info" onclick="viewAlarmDetail('{{ alarm.告警ID }}')" data-bs-toggle="modal" data-bs-target="#detailModal">
+                                <i class="bi bi-eye"></i> 查看
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 筛选模态框 -->
+<div class="modal fade" id="filterModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">筛选条件</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="GET" action="/alarm_review">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">告警等级</label>
+                        <select class="form-select" name="level">
+                            <option value="全部" {% if filters.level == '全部' %}selected{% endif %}>全部</option>
+                            <option value="高" {% if filters.level == '高' %}selected{% endif %}>高</option>
+                            <option value="中" {% if filters.level == '中' %}selected{% endif %}>中</option>
+                            <option value="低" {% if filters.level == '低' %}selected{% endif %}>低</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">处理状态</label>
+                        <select class="form-select" name="status">
+                            <option value="全部" {% if filters.status == '全部' %}selected{% endif %}>全部</option>
+                            <option value="未处理" {% if filters.status == '未处理' %}selected{% endif %}>未处理</option>
+                            <option value="处理中" {% if filters.status == '处理中' %}selected{% endif %}>处理中</option>
+                            <option value="已结案" {% if filters.status == '已结案' %}selected{% endif %}>已结案</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">告警类型</label>
+                        <select class="form-select" name="type">
+                            <option value="全部" {% if filters.type == '全部' %}selected{% endif %}>全部</option>
+                            <option value="越限告警" {% if filters.type == '越限告警' %}selected{% endif %}>越限告警</option>
+                            <option value="通讯故障" {% if filters.type == '通讯故障' %}selected{% endif %}>通讯故障</option>
+                            <option value="设备故障" {% if filters.type == '设备故障' %}selected{% endif %}>设备故障</option>
+                        </select>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label class="form-label">开始时间</label>
+                            <input type="date" class="form-control" name="start_time" value="{{ filters.start_time }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">结束时间</label>
+                            <input type="date" class="form-control" name="end_time" value="{{ filters.end_time }}">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary">筛选</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 详情模态框 -->
+<div class="modal fade" id="detailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">告警详情</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="alarmDetailContent">
+                <!-- 通过JavaScript动态加载 -->
+            </div>
+            <div class="modal-footer" id="alarmActionButtons">
+                <!-- 通过JavaScript动态加载 -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        $('#alarmTable').DataTable({
+            pageLength: 10,
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.11.5/i18n/zh-CN.json'
+            }
+        });
+    });
+
+    function viewAlarmDetail(alarmId) {
+        $.ajax({
+            url: '/api/get_alarm_detail/' + alarmId,
+            type: 'GET',
+            success: function(data) {
+                let html = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>告警编号:</strong> ${data.告警编号 || ''}</p>
+                            <p><strong>告警类型:</strong> ${data.告警类型 || ''}</p>
+                            <p><strong>告警等级:</strong> <span class="badge ${getLevelBadgeClass(data.告警等级)}">${data.告警等级 || ''}</span></p>
+                            <p><strong>发生时间:</strong> ${data.发生时间 || ''}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>关联设备:</strong> ${data.设备名称 || '未知设备'}</p>
+                            <p><strong>处理状态:</strong> <span class="badge ${getStatusBadgeClass(data.处理状态)}">${data.处理状态 || ''}</span></p>
+                            <p><strong>告警阈值:</strong> ${data.告警触发阈值 || ''}</p>
+                            <p><strong>确认时间:</strong> ${data.确认时间 || '未确认'}</p>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-md-12">
+                            <p><strong>告警内容:</strong></p>
+                            <div class="alert alert-warning">
+                                ${data.告警内容 || ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                $('#alarmDetailContent').html(html);
+                
+                let buttons = '';
+                if (data.处理状态 === '未处理') {
+                    buttons = `
+                        <button type="button" class="btn btn-success" onclick="confirmAlarm('${alarmId}')">
+                            <i class="bi bi-check-circle"></i> 确认告警
+                        </button>
+                        <button type="button" class="btn btn-warning" onclick="markFalseAlarm('${alarmId}')">
+                            <i class="bi bi-x-circle"></i> 标记误报
+                        </button>
+                        <button type="button" class="btn btn-primary" onclick="createWorkOrder('${alarmId}')">
+                            <i class="bi bi-plus-circle"></i> 生成工单
+                        </button>
+                    `;
+                } else if (data.处理状态 === '处理中') {
+                    buttons = `
+                        <button type="button" class="btn btn-primary" onclick="createWorkOrder('${alarmId}')">
+                            <i class="bi bi-plus-circle"></i> 生成工单
+                        </button>
+                    `;
+                }
+                
+                $('#alarmActionButtons').html(buttons);
+            }
+        });
+    }
+
+    function confirmAlarm(alarmId) {
+        if (confirm('确认将此告警标记为真实告警？')) {
+            $.ajax({
+                url: '/api/confirm_alarm/' + alarmId,
+                type: 'POST',
+                success: function(response) {
+                    if (response.success) {
+                        alert(response.message);
+                        location.reload();
+                    } else {
+                        alert('操作失败: ' + response.message);
+                    }
+                }
+            });
+        }
+    }
+
+    function markFalseAlarm(alarmId) {
+        if (confirm('确认将此告警标记为误报？')) {
+            $.ajax({
+                url: '/api/mark_false_alarm/' + alarmId,
+                type: 'POST',
+                success: function(response) {
+                    if (response.success) {
+                        alert(response.message);
+                        location.reload();
+                    } else {
+                        alert('操作失败: ' + response.message);
+                    }
+                }
+            });
+        }
+    }
+
+    function createWorkOrder(alarmId) {
+        window.location.href = '/work_order?alarm_id=' + alarmId;
+    }
+
+    function getLevelBadgeClass(level) {
+        switch(level) {
+            case '高': return 'bg-danger';
+            case '中': return 'bg-warning';
+            case '低': return 'bg-info';
+            default: return 'bg-secondary';
+        }
+    }
+
+    function getStatusBadgeClass(status) {
+        switch(status) {
+            case '未处理': return 'bg-warning';
+            case '处理中': return 'bg-info';
+            case '已结案': return 'bg-success';
+            default: return 'bg-secondary';
+        }
+    }
+
+    function refreshAlarms() {
+        location.reload();
+    }
+</script>
+{% endblock %}

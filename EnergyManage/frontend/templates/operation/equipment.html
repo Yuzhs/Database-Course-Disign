@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>设备管理 - 智慧能源管理系统</title>
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- DataTables -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
+    <style>
+        :root {
+            --primary: #667eea;
+            --secondary: #764ba2;
+        }
+        body {
+            background-color: #f8f9fa;
+        }
+        .sidebar {
+            background: linear-gradient(180deg, var(--primary) 0%, var(--secondary) 100%);
+            min-height: 100vh;
+            color: white;
+            position: fixed;
+            width: 250px;
+        }
+        .sidebar-header {
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .nav-link {
+            color: rgba(255,255,255,0.8);
+            padding: 12px 20px;
+            margin: 5px 10px;
+            border-radius: 10px;
+            transition: all 0.3s;
+        }
+        .nav-link:hover, .nav-link.active {
+            color: white;
+            background: rgba(255,255,255,0.1);
+        }
+        .nav-link i {
+            width: 24px;
+            text-align: center;
+            margin-right: 10px;
+        }
+        .main-content {
+            margin-left: 250px;
+            padding: 20px;
+        }
+        .page-header {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+        .equipment-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+            transition: all 0.3s;
+        }
+        .equipment-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        .equipment-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            margin-bottom: 15px;
+        }
+        .icon-electric { background: rgba(102, 126, 234, 0.1); color: var(--primary); }
+        .icon-solar { background: rgba(255, 193, 7, 0.1); color: #ffc107; }
+        .icon-water { background: rgba(13, 202, 240, 0.1); color: #0dcaf0; }
+        .icon-gas { background: rgba(25, 135, 84, 0.1); color: #198754; }
+        .equipment-status {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .status-normal { background: #d4edda; color: #155724; }
+        .status-fault { background: #f8d7da; color: #721c24; }
+        .status-maintenance { background: #fff3cd; color: #856404; }
+        .status-offline { background: #d1ecf1; color: #0c5460; }
+        .filter-section {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .search-box {
+            position: relative;
+        }
+        .search-box input {
+            padding-left: 45px;
+            border-radius: 10px;
+        }
+        .search-box i {
+            position: absolute;
+            left: 15px;
+            top: 12px;
+            color: #6c757d;
+        }
+        .category-filter {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .category-btn {
+            padding: 8px 20px;
+            border-radius: 20px;
+            border: 2px solid #e0e0e0;
+            background: white;
+            color: #666;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .category-btn.active {
+            border-color: var(--primary);
+            background: var(--primary);
+            color: white;
+        }
+        .category-btn:hover:not(.active) {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        @media (max-width: 768px) {
+            .sidebar {
+                margin-left: -250px;
+            }
+            .main-content {
+                margin-left: 0;
+            }
+            .sidebar.active {
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 侧边栏 -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <i class="fas fa-bolt fa-2x mb-2"></i>
+            <h5>能源管理系统</h5>
+            <small>运维版</small>
+        </div>
+        <nav class="nav flex-column mt-3">
+            <a class="nav-link active" href="/operation/dashboard">
+                <i class="fas fa-tachometer-alt"></i> 仪表板
+            </a>
+            <a class="nav-link" href="/operation/work_orders">
+                <i class="fas fa-clipboard-list"></i> 工单管理
+                <span class="badge bg-danger float-end" id="pendingBadge">0</span>
+            </a>
+            <a class="nav-link" href="/operation/equipment">
+                <i class="fas fa-cogs"></i> 设备管理
+            </a>
+            <a class="nav-link" href="/operation/alerts">
+                <i class="fas fa-exclamation-triangle"></i> 告警管理
+                <span class="badge bg-danger float-end" id="alertBadge">0</span>
+            </a>
+            <a class="nav-link" href="/operation/profile">
+                <i class="fas fa-user-circle"></i> 个人中心
+            </a>
+            <div class="mt-auto">
+                <a class="nav-link text-danger" href="#" id="logoutBtn">
+                    <i class="fas fa-sign-out-alt"></i> 退出登录
+                </a>
+            </div>
+        </nav>
+    </div>
+
+    <!-- 主内容区 -->
+    <div class="main-content" id="mainContent">
+        <!-- 页面标题 -->
+        <div class="page-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2><i class="fas fa-cogs me-2"></i>设备管理</h2>
+                    <p class="text-muted mb-0">查看和管理所负责的设备</p>
+                </div>
+                <div>
+                    <button class="btn btn-primary" onclick="refreshEquipment()">
+                        <i class="fas fa-sync-alt"></i> 刷新
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 筛选区域 -->
+        <div class="filter-section">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="search-box mb-3">
+                        <i class="fas fa-search"></i>
+                        <input type="text" class="form-control" id="searchInput"
+                               placeholder="搜索设备名称或编号..." onkeyup="filterEquipment()">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">设备状态筛选</label>
+                        <select class="form-select" id="statusFilter" onchange="filterEquipment()">
+                            <option value="all">全部状态</option>
+                            <option value="正常">正常</option>
+                            <option value="故障">故障</option>
+                            <option value="维护中">维护中</option>
+                            <option value="离线">离线</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="category-filter">
+                <div class="category-btn active" data-category="all" onclick="filterByCategory('all')">
+                    全部设备
+                </div>
+                <div class="category-btn" data-category="配电设备" onclick="filterByCategory('配电设备')">
+                    <i class="fas fa-bolt me-1"></i> 配电设备
+                </div>
+                <div class="category-btn" data-category="光伏设备" onclick="filterByCategory('光伏设备')">
+                    <i class="fas fa-solar-panel me-1"></i> 光伏设备
+                </div>
+                <div class="category-btn" data-category="能耗设备" onclick="filterByCategory('能耗设备')">
+                    <i class="fas fa-tachometer-alt me-1"></i> 能耗设备
+                </div>
+            </div>
+        </div>
+
+        <!-- 设备统计 -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="equipment-card text-center">
+                    <div class="equipment-icon icon-electric mx-auto">
+                        <i class="fas fa-bolt"></i>
+                    </div>
+                    <h3 id="totalEquipment">0</h3>
+                    <p class="text-muted mb-0">设备总数</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="equipment-card text-center">
+                    <div class="equipment-icon icon-solar mx-auto">
+                        <i class="fas fa-solar-panel"></i>
+                    </div>
+                    <h3 id="normalEquipment">0</h3>
+                    <p class="text-muted mb-0">正常运行</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="equipment-card text-center">
+                    <div class="equipment-icon icon-water mx-auto">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <h3 id="faultEquipment">0</h3>
+                    <p class="text-muted mb-0">故障设备</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="equipment-card text-center">
+                    <div class="equipment-icon icon-gas mx-auto">
+                        <i class="fas fa-tools"></i>
+                    </div>
+                    <h3 id="maintenanceEquipment">0</h3>
+                    <p class="text-muted mb-0">维护中</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 设备列表 -->
+        <div id="equipmentList">
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">加载中...</span>
+                </div>
+                <p class="mt-3">正在加载设备数据...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 设备详情模态框 -->
+    <div class="modal fade" id="detailModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">设备详情</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">设备编号</label>
+                                <input type="text" class="form-control" id="detailId" readonly>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">设备名称</label>
+                                <input type="text" class="form-control" id="detailName" readonly>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">设备类型</label>
+                                <input type="text" class="form-control" id="detailType" readonly>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">设备大类</label>
+                                <input type="text" class="form-control" id="detailCategory" readonly>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">运行状态</label>
+                                <div>
+                                    <span class="equipment-status" id="detailStatus"></span>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">安装位置</label>
+                                <input type="text" class="form-control" id="detailLocation" readonly>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">安装时间</label>
+                                <input type="text" class="form-control" id="detailInstallTime" readonly>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">质保期</label>
+                                <input type="text" class="form-control" id="detailWarranty" readonly>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <h6>维护记录</h6>
+                        <div id="maintenanceRecords" class="bg-light p-3 rounded">
+                            暂无维护记录
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // API基础URL
+        const API_BASE = '/api';
+
+        // 全局变量
+        let allEquipment = [];
+        let currentCategory = 'all';
+
+        // 检查登录状态
+        checkLogin();
+
+        // 退出登录
+        document.getElementById('logoutBtn').addEventListener('click', logout);
+
+        // 加载设备数据
+        loadEquipment();
+
+        // 函数定义
+        // 替换原来的 checkLogin 函数
+function checkLogin() {
+    verifyLogin();
+}
+
+async function verifyLogin() {
+    try {
+        const response = await fetch('/api/check-login', {
+            method: 'GET',
+            credentials: 'include'
+        });
+
+        if (!response.ok) {
+            window.location.href = '/login';
+            return;
+        }
+
+        const result = await response.json();
+
+        if (result.success) {
+            // 已登录，可以继续加载页面数据
+            console.log('用户已登录:', result.data.real_name);
+
+            // 根据页面需要，可能还要更新用户信息显示
+            if (document.getElementById('userName')) {
+                document.getElementById('userName').textContent = result.data.real_name || '运维人员';
+            }
+            if (document.getElementById('userRealName')) {
+                document.getElementById('userRealName').textContent = result.data.real_name || '运维人员';
+            }
+
+            return result.data; // 返回用户信息，供后续使用
+        } else {
+            window.location.href = '/login';
+            return null;
+        }
+    } catch (error) {
+        console.error('检查登录状态失败:', error);
+        window.location.href = '/login';
+        return null;
+    }
+}
+
+        async function loadEquipment() {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${API_BASE}/operation/equipment`, {
+                    headers: { 'Authorization': token }
+                });
+
+                if (response.status === 401) {
+                    localStorage.clear();
+                    window.location.href = 'index.html';
+                    return;
+                }
+
+                const result = await response.json();
+
+                if (result.success) {
+                    allEquipment = result.data;
+                    updateStatistics();
+                    renderEquipment();
+                    await updateAlertBadge();
+                } else {
+                    showError('加载设备失败');
+                }
+            } catch (error) {
+                console.error('加载设备失败:', error);
+                showError('网络错误，请检查连接');
+            }
+        }
+
+        function updateStatistics() {
+            const total = allEquipment.length;
+            const normal = allEquipment.filter(e => e.运行状态 === '正常').length;
+            const fault = allEquipment.filter(e => e.运行状态 === '故障').length;
+            const maintenance = allEquipment.filter(e => e.运行状态 === '维护中').length;
+
+            document.getElementById('totalEquipment').textContent = total;
+            document.getElementById('normalEquipment').textContent = normal;
+            document.getElementById('faultEquipment').textContent = fault;
+            document.getElementById('maintenanceEquipment').textContent = maintenance;
+        }
+
+        function filterByCategory(category) {
+            currentCategory = category;
+
+            // 更新按钮状态
+            document.querySelectorAll('.category-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.category === category) {
+                    btn.classList.add('active');
+                }
+            });
+
+            renderEquipment();
+        }
+
+        function filterEquipment() {
+            renderEquipment();
+        }
+
+        function renderEquipment() {
+            let filteredEquipment = [...allEquipment];
+
+            // 按类别过滤
+            if (currentCategory !== 'all') {
+                filteredEquipment = filteredEquipment.filter(e => e.设备大类 === currentCategory);
+            }
+
+            // 按搜索词过滤
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            if (searchTerm) {
+                filteredEquipment = filteredEquipment.filter(e =>
+                    (e.设备名称 && e.设备名称.toLowerCase().includes(searchTerm)) ||
+                    (e.设备编号 && e.设备编号.toLowerCase().includes(searchTerm))
+                );
+            }
+
+            // 按状态过滤
+            const statusFilter = document.getElementById('statusFilter').value;
+            if (statusFilter !== 'all') {
+                filteredEquipment = filteredEquipment.filter(e => e.运行状态 === statusFilter);
+            }
+
+            const container = document.getElementById('equipmentList');
+
+            if (filteredEquipment.length === 0) {
+                container.innerHTML = `
+                <div class="text-center py-5">
+                    <i class="fas fa-cogs fa-3x text-muted mb-3"></i>
+                    <h4 class="text-muted">暂无设备</h4>
+                    <p class="text-muted">当前筛选条件下没有设备记录</p>
+                </div>
+                `;
+                return;
+            }
+
+            let html = '<div class="row">';
+
+            filteredEquipment.forEach(equipment => {
+                html += createEquipmentCard(equipment);
+            });
+
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        function createEquipmentCard(equipment) {
+            // 确定图标和样式
+            let iconClass, statusClass, statusText;
+
+            if (equipment.设备大类 === '配电设备') {
+                iconClass = 'icon-electric';
+            } else if (equipment.设备大类 === '光伏设备') {
+                iconClass = 'icon-solar';
+            } else if (equipment.设备大类 === '能耗设备') {
+                iconClass = 'icon-water';
+            } else {
+                iconClass = 'icon-gas';
+            }
+
+            // 确定状态样式
+            if (equipment.运行状态 === '正常') {
+                statusClass = 'status-normal';
+                statusText = '正常';
+            } else if (equipment.运行状态 === '故障') {
+                statusClass = 'status-fault';
+                statusText = '故障';
+            } else if (equipment.运行状态 === '维护中') {
+                statusClass = 'status-maintenance';
+                statusText = '维护中';
+            } else {
+                statusClass = 'status-offline';
+                statusText = '离线';
+            }
+
+            return `
+            <div class="col-md-4">
+                <div class="equipment-card">
+                    <div class="d-flex align-items-start mb-3">
+                        <div class="${iconClass}">
+                            <i class="fas fa-${getEquipmentIcon(equipment.设备类型)}"></i>
+                        </div>
+                        <div class="ms-3 flex-grow-1">
+                            <h5 class="mb-1">${equipment.设备名称}</h5>
+                            <p class="text-muted mb-0">${equipment.设备编号}</p>
+                        </div>
+                        <div>
+                            <span class="equipment-status ${statusClass}">${statusText}</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="row">
+                            <div class="col-6">
+                                <small class="text-muted d-block">设备类型</small>
+                                <strong>${equipment.设备类型 || '未分类'}</strong>
+                            </div>
+                            <div class="col-6">
+                                <small class="text-muted d-block">安装时间</small>
+                                <strong>${equipment.安装时间 ? equipment.安装时间.split('T')[0] : '未知'}</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <small class="text-muted d-block">安装位置</small>
+                        <p class="mb-0">${equipment.安装位置描述 || '未记录'}</p>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="badge bg-light text-dark">
+                            ${equipment.质保期 ? `质保${equipment.质保期}年` : '无质保'}
+                        </span>
+                        <div>
+                            <button class="btn btn-sm btn-outline-primary"
+                                    onclick="showEquipmentDetail('${equipment.设备编号}')">
+                                <i class="fas fa-info-circle"></i> 详情
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            `;
+        }
+
+        function getEquipmentIcon(type) {
+            const iconMap = {
+                '变压器': 'bolt',
+                '配电回路': 'plug',
+                '逆变器': 'solar-panel',
+                '汇流箱': 'stream',
+                '水表': 'tint',
+                '天然气表': 'fire',
+                '蒸汽表': 'thermometer-half'
+            };
+            return iconMap[type] || 'cog';
+        }
+
+        function showEquipmentDetail(equipmentId) {
+            const equipment = allEquipment.find(e => e.设备编号 === equipmentId);
+            if (!equipment) return;
+
+            // 填充详情数据
+            document.getElementById('detailId').value = equipment.设备编号;
+            document.getElementById('detailName').value = equipment.设备名称;
+            document.getElementById('detailType').value = equipment.设备类型 || '未分类';
+            document.getElementById('detailCategory').value = equipment.设备大类 || '未分类';
+            document.getElementById('detailLocation').value = equipment.安装位置描述 || '未记录';
+            document.getElementById('detailInstallTime').value = equipment.安装时间 ?
+                equipment.安装时间.split('T')[0] : '未知';
+            document.getElementById('detailWarranty').value = equipment.质保期 ?
+                `${equipment.质保期}年` : '无质保';
+
+            // 设置状态
+            const statusSpan = document.getElementById('detailStatus');
+            statusSpan.className = 'equipment-status ';
+            if (equipment.运行状态 === '正常') {
+                statusSpan.classList.add('status-normal');
+                statusSpan.textContent = '正常';
+            } else if (equipment.运行状态 === '故障') {
+                statusSpan.classList.add('status-fault');
+                statusSpan.textContent = '故障';
+            } else if (equipment.运行状态 === '维护中') {
+                statusSpan.classList.add('status-maintenance');
+                statusSpan.textContent = '维护中';
+            } else {
+                statusSpan.classList.add('status-offline');
+                statusSpan.textContent = '离线';
+            }
+
+            // 显示维护记录
+            const recordsDiv = document.getElementById('maintenanceRecords');
+            recordsDiv.innerHTML = equipment.维修记录 || '暂无维护记录';
+
+            // 显示模态框
+            const modal = new bootstrap.Modal(document.getElementById('detailModal'));
+            modal.show();
+        }
+
+        function refreshEquipment() {
+            loadEquipment();
+            updateAlertBadge();
+            showMessage('正在刷新数据...', 'info');
+        }
+
+        async function logout() {
+            try {
+                const token = localStorage.getItem('token');
+                await fetch(`${API_BASE}/logout`, {
+                    method: 'POST',
+                    headers: { 'Authorization': token }
+                });
+            } catch (error) {
+                console.error('退出登录失败:', error);
+            } finally {
+                localStorage.clear();
+                window.location.href = '/login';
+            }
+        }
+
+        function showMessage(message, type = 'info') {
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+            alert.style.cssText = `
+                top: 20px;
+                right: 20px;
+                z-index: 9999;
+                min-width: 300px;
+            `;
+            alert.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+
+            document.body.appendChild(alert);
+
+            setTimeout(() => {
+                alert.remove();
+            }, 3000);
+        }
+
+        function showError(message) {
+            const container = document.getElementById('equipmentList');
+            container.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                ${message}
+                <button class="btn btn-sm btn-outline-danger float-end" onclick="loadEquipment()">
+                    重试
+                </button>
+            </div>
+            `;
+        }
+
+        // 通用函数 - 更新告警徽章
+        async function updateAlertBadge() {
+            try {
+                const token = localStorage.getItem('token');
+
+                // 获取未处理的告警数量
+                const response = await fetch(`${API_BASE}/alert-badge`, {
+                    headers: { 'Authorization': token }
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    const count = result.count || 0;
+
+                    // 更新所有页面中的告警徽章
+                    const badges = document.querySelectorAll('#alertBadge, .alert-badge');
+                    badges.forEach(badge => {
+                        badge.textContent = count;
+                        badge.style.display = count > 0 ? 'inline' : 'none';
+                    });
+
+                    return count;
+                }
+                return 0;
+            } catch (error) {
+                console.error('更新告警徽章失败:', error);
+                return 0;
+            }
+        }
+
+        // 页面加载时更新告警徽章
+        document.addEventListener('DOMContentLoaded', function() {
+            updateAlertBadge();
+
+            // 设置定期更新（每30秒）
+            setInterval(updateAlertBadge, 30000);
+
+            // 页面获得焦点时更新
+            document.addEventListener('visibilitychange', function() {
+                if (!document.hidden) {
+                    updateAlertBadge();
+                }
+            });
+        });
+        async function runDebug() {
+    try {
+        console.log('🔍 开始调试...');
+
+        // 1. 获取调试信息
+        const debugResponse = await fetch(`${API_BASE}/debug/equipment-debug`, {
+            method: 'GET',
+            credentials: 'include'
+        });
+
+        if (debugResponse.ok) {
+            const debugResult = await debugResponse.json();
+            console.log('🔍 调试信息:', debugResult);
+
+            // 显示调试信息
+            const debugInfo = debugResult.debug_info;
+            alert(`调试信息：
+用户: ${debugInfo.user_info?.真实姓名}
+用户角色: ${debugInfo.user_info?.用户角色}
+Session厂区ID: ${debugInfo.session_factory_id}
+数据库厂区ID: ${debugInfo.user_factory_id}
+厂区设备数量: ${debugInfo.equipment_count_in_factory}
+
+数据库中各厂区设备分布:
+${debugInfo.equipment_by_factory?.map(item =>
+    `厂区 ${item.所属厂区编号}: ${item.device_count} 台设备`
+).join('\n') || '无数据'}
+            `);
+        }
+
+        // 2. 检查当前查询结果
+        console.log('🔍 当前设备数据:', allEquipment);
+        console.log(`🔍 当前设备数量: ${allEquipment.length}`);
+
+        // 3. 显示设备厂区分布
+        const factoryDistribution = {};
+        allEquipment.forEach(device => {
+            // 注意：这里可能需要根据你的数据结构调整
+            const factory = device.所属厂区编号 || device.厂区名称 ;
+            factoryDistribution[factory] = (factoryDistribution[factory] || 0) + 1;
+        });
+
+        console.log('🔍 设备厂区分布:', factoryDistribution);
+
+    } catch (error) {
+        console.error('❌ 调试失败:', error);
+        alert(`调试失败: ${error.message}`);
+    }
+}
+    </script>
+</body>
+</html>

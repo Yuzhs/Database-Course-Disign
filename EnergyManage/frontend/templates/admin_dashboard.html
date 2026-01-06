@@ -1,0 +1,2991 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系统管理员面板 - 智慧能源管理系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            width: 250px;
+            background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding-top: 20px;
+            z-index: 1000;
+            overflow-y: auto;
+        }
+        .sidebar-header {
+            padding: 0 20px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .sidebar-header h4 {
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        .sidebar-header small {
+            opacity: 0.8;
+        }
+        .nav-link {
+            color: rgba(255,255,255,0.8);
+            padding: 12px 20px;
+            transition: all 0.3s;
+        }
+        .nav-link:hover {
+            color: white;
+            background-color: rgba(255,255,255,0.1);
+        }
+        .nav-link.active {
+            color: white;
+            background-color: rgba(255,255,255,0.2);
+            border-left: 4px solid white;
+        }
+        .nav-link i {
+            margin-right: 10px;
+            width: 20px;
+        }
+        .main-content {
+            margin-left: 250px;
+            padding: 20px;
+        }
+        .header-bar {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .section {
+            display: none;
+        }
+        .section.active {
+            display: block;
+        }
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            text-align: center;
+            height: 100%;
+        }
+        .stat-card i {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        .stat-card h3 {
+            font-size: 2rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        .stat-card p {
+            color: #6c757d;
+            margin-bottom: 0;
+        }
+        .table-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+        }
+        .table-container h5 {
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        .progress {
+            border-radius: 10px;
+        }
+        .progress-bar {
+            border-radius: 10px;
+        }
+        .form-section {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+        }
+        .form-section h6 {
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        .test-results {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+        }
+        .test-results .alert {
+            margin-bottom: 10px;
+            padding: 10px 15px;
+            font-size: 14px;
+        }
+        .test-form {
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            margin-top: 15px;
+        }
+        .entity-card {
+            transition: all 0.3s ease;
+            border: 1px solid #dee2e6;
+        }
+        .entity-card:hover {
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+        .entity-badge {
+            font-size: 12px;
+            padding: 3px 8px;
+        }
+        .test-operation {
+            padding: 10px;
+            border-left: 4px solid #0d6efd;
+            margin-bottom: 10px;
+            background-color: #f8f9fa;
+        }
+        .test-operation.success {
+            border-left-color: #198754;
+        }
+        .test-operation.error {
+            border-left-color: #dc3545;
+        }
+        .test-operation.warning {
+            border-left-color: #ffc107;
+        }
+    </style>
+</head>
+<body>
+    <!-- 侧边栏 -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h4>系统管理</h4>
+            <small>智慧能源管理系统</small>
+        </div>
+        <ul class="nav flex-column">
+            <li class="nav-item">
+                <a class="nav-link active" href="#" onclick="showSection('dashboard')">
+                    <i class="bi bi-speedometer2"></i> 仪表板
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#" onclick="showSection('userManagement')">
+                    <i class="bi bi-people"></i> 用户管理
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#" onclick="showSection('alarmRules')">
+                    <i class="bi bi-bell"></i> 告警规则
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#" onclick="showSection('backupRestore')">
+                    <i class="bi bi-database"></i> 备份恢复
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#" onclick="showSection('monitoring')">
+                    <i class="bi bi-heart-pulse"></i> 系统监控
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#" onclick="showSection('persistence')">
+                    <i class="bi bi-database-check"></i> 持久层测试
+                </a>
+            </li>
+            <li class="nav-item mt-auto">
+                <a class="nav-link" href="#" onclick="logout()">
+                    <i class="bi bi-box-arrow-right"></i> 退出登录
+                </a>
+            </li>
+        </ul>
+    </div>
+
+    <!-- 主内容区 -->
+    <div class="main-content">
+        <!-- 顶部栏 -->
+        <div class="header-bar d-flex justify-content-between align-items-center">
+            <h4 id="pageTitle">系统管理员仪表板</h4>
+            <div class="d-flex align-items-center">
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-person-circle me-2"></i>
+                        <span id="currentUser">系统管理员</span>
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item text-danger" href="#" onclick="logout()">
+                            <i class="bi bi-box-arrow-right me-2"></i>退出登录
+                        </a></li>
+                    </ul>
+                </div>
+                <span class="badge bg-success ms-2">在线</span>
+            </div>
+        </div>
+
+        <!-- 仪表板部分 -->
+        <div id="dashboardSection" class="section active">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="stat-card users">
+                        <i class="bi bi-people text-primary"></i>
+                        <h3 id="userCount">0</h3>
+                        <p>用户总数</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card devices">
+                        <i class="bi bi-cpu text-info"></i>
+                        <h3 id="deviceCount">0</h3>
+                        <p>设备总数</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card alarms">
+                        <i class="bi bi-bell text-warning"></i>
+                        <h3 id="alarmCount">0</h3>
+                        <p>告警总数</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card performance">
+                        <i class="bi bi-database text-success"></i>
+                        <h3 id="dbSize">0 MB</h3>
+                        <p>数据库大小</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-4">
+                <div class="col-md-8">
+                    <div class="table-container">
+                        <h5>最近活动</h5>
+                        <div class="table-responsive">
+                            <table class="table table-hover" id="recentAlarmsTable">
+                                <thead>
+                                    <tr>
+                                        <th>操作时间</th>
+                                        <th>操作人员</th>
+                                        <th>操作内容</th>
+                                        <th>操作结果</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="table-container">
+                        <h5>系统状态</h5>
+                        <div class="table-responsive">
+                            <table class="table" id="systemStatusTable">
+                                <tbody>
+                                    <tr>
+                                        <td>数据库连接</td>
+                                        <td><span class="badge bg-success">正常</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>系统运行时间</td>
+                                        <td id="systemUptime">-</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 用户管理部分 -->
+        <div id="userManagementSection" class="section">
+            <div class="table-container">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5>用户管理</h5>
+                    <button class="btn btn-primary" onclick="showAddUserModal()">
+                        <i class="bi bi-plus-circle"></i> 添加用户
+                    </button>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <select class="form-select" id="filterRole">
+                            <option value="">所有角色</option>
+                            <option value="能源管理员">能源管理员</option>
+                            <option value="运维人员">运维人员</option>
+                            <option value="数据分析师">数据分析师</option>
+                            <option value="系统管理员">系统管理员</option>
+                            <option value="企业管理层">企业管理层</option>
+                            <option value="运维工单管理员">运维工单管理员</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="input-group">
+                            <input type="text" class="form-control" placeholder="搜索用户..." id="searchUser">
+                            <button class="btn btn-outline-secondary" type="button" onclick="filterUsers()">
+                                <i class="bi bi-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover" id="usersTable">
+                        <thead>
+                            <tr>
+                                <th>用户ID</th>
+                                <th>登录账号</th>
+                                <th>真实姓名</th>
+                                <th>角色</th>
+                                <th>负责厂区</th>
+                                <th>手机号码</th>
+                                <th>最后登录</th>
+                                <th>状态</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 告警规则部分 -->
+        <div id="alarmRulesSection" class="section">
+            <div class="table-container">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5>告警规则配置</h5>
+                    <button class="btn btn-primary" onclick="showAddAlarmRuleModal()">
+                        <i class="bi bi-plus-circle"></i> 添加规则
+                    </button>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover" id="alarmRulesTable">
+                        <thead>
+                            <tr>
+                                <th>规则名称</th>
+                                <th>设备类型</th>
+                                <th>告警参数</th>
+                                <th>条件</th>
+                                <th>阈值</th>
+                                <th>告警等级</th>
+                                <th>状态</th>
+                                <th>创建时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 备份恢复部分 -->
+        <div id="backupRestoreSection" class="section">
+            <div class="row">
+                <div class="col-md-7">
+                    <div class="table-container">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5>备份管理</h5>
+                            <button class="btn btn-success" onclick="performBackup()">
+                                <i class="bi bi-download"></i> 执行备份
+                            </button>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-hover" id="backupsTable">
+                                <thead>
+                                    <tr>
+                                        <th>备份时间</th>
+                                        <th>备份文件</th>
+                                        <th>备份类型</th>
+                                        <th>大小</th>
+                                        <th>状态</th>
+                                        <th>操作人员</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-5">
+                    <div class="table-container">
+                        <h5>恢复数据库</h5>
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            警告：恢复操作将覆盖当前数据库数据！
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">选择备份文件</label>
+                            <select class="form-select" id="backupSelect">
+                                <option value="">请选择备份文件...</option>
+                            </select>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-danger" onclick="performRestore()" id="restoreButton" disabled>
+                                <i class="bi bi-arrow-counterclockwise"></i> 执行恢复
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 备份统计 -->
+                    <div class="table-container mt-3">
+                        <h5>备份统计</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card text-center">
+                                    <div class="card-body">
+                                        <h6 class="card-title">总备份数</h6>
+                                        <h3 id="totalBackups">0</h3>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card text-center">
+                                    <div class="card-body">
+                                        <h6 class="card-title">总大小</h6>
+                                        <h3 id="totalBackupSize">0 MB</h3>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 系统监控部分 -->
+        <div id="monitoringSection" class="section">
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="table-container">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5>数据库性能监控</h5>
+                            <div>
+                                <button class="btn btn-outline-secondary me-2" onclick="refreshMonitoring()">
+                                    <i class="bi bi-arrow-clockwise"></i> 刷新
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 监控图表 -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h6 class="card-title">CPU使用率</h6>
+                                        <div class="d-flex align-items-center">
+                                            <div class="flex-grow-1">
+                                                <div class="progress" style="height: 20px;">
+                                                    <div class="progress-bar bg-success" role="progressbar" id="cpuProgress" style="width: 0%"></div>
+                                                </div>
+                                            </div>
+                                            <div class="ms-3">
+                                                <span id="cpuPercent">0%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h6 class="card-title">内存使用率</h6>
+                                        <div class="d-flex align-items-center">
+                                            <div class="flex-grow-1">
+                                                <div class="progress" style="height: 20px;">
+                                                    <div class="progress-bar bg-info" role="progressbar" id="memoryProgress" style="width: 0%"></div>
+                                                </div>
+                                            </div>
+                                            <div class="ms-3">
+                                                <span id="memoryPercent">0%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 表空间使用情况 -->
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="card-title">表空间使用情况</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-sm" id="tableSpaceTable">
+                                        <thead>
+                                            <tr>
+                                                <th>表名</th>
+                                                <th>行数</th>
+                                                <th>数据大小</th>
+                                                <th>索引大小</th>
+                                                <th>总大小</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="table-container">
+                        <h5>系统信息</h5>
+                        <div class="mb-2">
+                            <small class="text-muted">系统版本</small>
+                            <div>智慧能源管理系统 v1.0</div>
+                        </div>
+                        <div class="mb-2">
+                            <small class="text-muted">数据库版本</small>
+                            <div id="dbVersion">MySQL</div>
+                        </div>
+                        <div class="mb-2">
+                            <small class="text-muted">系统运行时间</small>
+                            <div id="systemUptimeInfo">-</div>
+                        </div>
+                        <div class="mb-2">
+                            <small class="text-muted">当前连接数</small>
+                            <div id="currentConnections">0</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 持久层测试部分 -->
+        <!-- 持久层测试部分 -->
+<div id="persistenceSection" class="section">
+    <div class="table-container">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5>持久层功能测试</h5>
+            <div>
+                <button class="btn btn-outline-primary me-2" onclick="runAllTests()">
+                    <i class="bi bi-play-circle"></i> 运行所有测试
+                </button>
+                <button class="btn btn-success" onclick="showTestDataModal('addDevice')">
+                    <i class="bi bi-plus-circle"></i> 添加测试数据
+                </button>
+            </div>
+        </div>
+
+        <!-- 测试结果展示 -->
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">测试结果</h6>
+                    </div>
+                    <div class="card-body">
+                        <div id="testResults" class="test-results"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 功能测试按钮组 -->
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">核心业务操作测试</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="card mb-3">
+                                    <div class="card-header bg-primary text-white">
+                                        <h6 class="mb-0">新增操作</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="d-grid gap-2">
+                                            <button class="btn btn-outline-primary mb-2" onclick="showTestDataModal('addPVDevice')">
+                                                <i class="bi bi-sun"></i> 添加光伏设备
+                                            </button>
+                                            <button class="btn btn-outline-primary mb-2" onclick="showTestDataModal('addEnergyData')">
+                                                <i class="bi bi-lightning-charge"></i> 录入能耗数据
+                                            </button>
+                                            <button class="btn btn-outline-primary mb-2" onclick="showTestDataModal('addDevice')">
+                                                <i class="bi bi-cpu"></i> 添加普通设备
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-3">
+                                <div class="card mb-3">
+                                    <div class="card-header bg-warning text-white">
+                                        <h6 class="mb-0">修改操作</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="d-grid gap-2">
+                                            <button class="btn btn-outline-warning mb-2" onclick="showTestDataModal('updateAlarm')">
+                                                <i class="bi bi-bell"></i> 更新告警状态
+                                            </button>
+                                            <button class="btn btn-outline-warning mb-2" onclick="showTestDataModal('updateEquipment')">
+                                                <i class="bi bi-tools"></i> 编辑设备台账
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-3">
+                                <div class="card mb-3">
+                                    <div class="card-header bg-info text-white">
+                                        <h6 class="mb-0">查询操作</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="d-grid gap-2">
+                                            <button class="btn btn-outline-info mb-2" onclick="showTestDataModal('queryCircuit')">
+                                                <i class="bi bi-graph-up"></i> 查询回路数据
+                                            </button>
+                                            <button class="btn btn-outline-info mb-2" onclick="showTestDataModal('queryWorkOrder')">
+                                                <i class="bi bi-clipboard-check"></i> 查询运维工单
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-3">
+                                <div class="card mb-3">
+                                    <div class="card-header bg-danger text-white">
+                                        <h6 class="mb-0">删除操作</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="d-grid gap-2">
+                                            <button class="btn btn-outline-danger mb-2" onclick="showTestDataModal('deleteAlarm')">
+                                                <i class="bi bi-trash"></i> 删除过期告警
+                                            </button>
+                                            <button class="btn btn-outline-danger mb-2" onclick="deleteInvalidData()">
+                                                <i class="bi bi-database-x"></i> 清理无效数据
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 测试数据预览 -->
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0">数据预览</h6>
+                        <div class="btn-group">
+                            <button class="btn btn-sm btn-outline-primary" onclick="loadTestData('devices')">
+                                <i class="bi bi-cpu"></i> 设备
+                            </button>
+                            <button class="btn btn-sm btn-outline-info" onclick="loadTestData('energy')">
+                                <i class="bi bi-lightning-charge"></i> 能耗
+                            </button>
+                            <button class="btn btn-sm btn-outline-warning" onclick="loadTestData('alarms')">
+                                <i class="bi bi-bell"></i> 告警
+                            </button>
+                            <button class="btn btn-sm btn-outline-success" onclick="loadTestData('workorders')">
+                                <i class="bi bi-clipboard-check"></i> 工单
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover" id="testDataTable">
+                                <thead id="testDataHeader"></thead>
+                                <tbody id="testDataBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 测试数据模态框 -->
+<div class="modal fade" id="testDataModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="testModalTitle">测试数据</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="testDataForm">
+                    <!-- 表单内容会根据不同的测试类型动态加载 -->
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="submitTestData()">执行测试</button>
+            </div>
+        </div>
+    </div>
+</div>
+    </div>
+
+    <!-- 模态框区域 -->
+    <!-- 添加用户模态框 -->
+    <div class="modal fade" id="addUserModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">添加新用户</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addUserForm">
+                        <div class="mb-3">
+                            <label class="form-label">登录账号 *</label>
+                            <input type="text" class="form-control" name="login_account" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">真实姓名 *</label>
+                            <input type="text" class="form-control" name="real_name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">密码 *</label>
+                            <input type="password" class="form-control" name="password" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">角色 *</label>
+                            <select class="form-select" name="role" required>
+                                <option value="">请选择角色...</option>
+                                <option value="能源管理员">能源管理员</option>
+                                <option value="运维人员">运维人员</option>
+                                <option value="数据分析师">数据分析师</option>
+                                <option value="系统管理员">系统管理员</option>
+                                <option value="企业管理层">企业管理层</option>
+                                <option value="运维工单管理员">运维工单管理员</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">手机号码</label>
+                            <input type="tel" class="form-control" name="phone">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="saveUser()">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加告警规则模态框 -->
+    <div class="modal fade" id="addAlarmRuleModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">添加告警规则</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addAlarmRuleForm">
+                        <div class="mb-3">
+                            <label class="form-label">规则名称 *</label>
+                            <input type="text" class="form-control" name="rule_name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">设备类型 *</label>
+                            <select class="form-select" name="device_type" required>
+                                <option value="">请选择设备类型...</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">告警参数 *</label>
+                            <select class="form-select" name="alarm_param" required>
+                                <option value="">请选择参数...</option>
+                                <option value="温度">温度</option>
+                                <option value="电压">电压</option>
+                                <option value="电流">电流</option>
+                                <option value="负载率">负载率</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">告警阈值 *</label>
+                            <input type="number" class="form-control" name="threshold" step="0.01" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">告警等级 *</label>
+                            <select class="form-select" name="alarm_level" required>
+                                <option value="高">高</option>
+                                <option value="中">中</option>
+                                <option value="低">低</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="saveAlarmRule()">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 备份进度模态框 -->
+    <div class="modal fade" id="backupProgressModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">数据库备份</h5>
+                </div>
+                <div class="modal-body">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">备份中...</span>
+                        </div>
+                        <p class="mt-3" id="backupMessage">正在备份数据库，请稍候...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript库 -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/min/moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/locale/zh-cn.min.js"></script>
+
+    <script>
+        // 设置moment为中文
+        moment.locale('zh-cn');
+
+        // 全局变量
+        let currentSection = 'dashboard';
+        let users = [];
+        let alarmRules = [];
+
+        // 页面初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            loadCurrentUser();
+            showSection('dashboard');
+            setInterval(loadDashboardStats, 60000);
+            setInterval(updateSystemTime, 1000);
+        });
+
+        function getRoleBadge(role) {
+        if (!role) return 'bg-secondary';
+
+        const badgeMap = {
+            '系统管理员': 'bg-danger',
+            '能源管理员': 'bg-primary',
+            '运维人员': 'bg-info',
+            '数据分析师': 'bg-warning',
+            '企业管理层': 'bg-success',
+            '运维工单管理员': 'bg-secondary'
+        };
+        return badgeMap[role] || 'bg-secondary';
+    }
+    // ============ 新增结束 ============
+
+    // ============ 新增：告警等级徽章函数 ============
+    function getAlarmLevelBadge(level) {
+        if (!level) return 'bg-secondary';
+
+        const badgeMap = {
+            '高': 'bg-danger',
+            '中': 'bg-warning',
+            '低': 'bg-info'
+        };
+        return badgeMap[level] || 'bg-secondary';
+    }
+    // ============ 新增结束 ============
+
+    // ============ 新增：更新系统时间函数 ============
+    function updateSystemTime() {
+        // 如果需要显示当前时间，可以在这里实现
+        // const now = moment().format('YYYY-MM-DD HH:mm:ss');
+        // document.getElementById('currentTime').textContent = now;
+    }
+    // ============ 新增结束 ============
+
+    // 页面初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        loadCurrentUser();
+        showSection('dashboard');
+        // 立即加载仪表板数据
+        loadDashboardStats();
+        // 加载监控数据
+        loadMonitoringData();
+        setInterval(loadDashboardStats, 60000);
+        setInterval(updateSystemTime, 1000);
+    });
+
+    // 显示当前用户
+    function loadCurrentUser() {
+        const username = sessionStorage.getItem('username') || '系统管理员';
+        document.getElementById('currentUser').textContent = username;
+    }
+
+    // 显示指定部分
+    function showSection(sectionId) {
+        // 隐藏所有部分
+        document.querySelectorAll('.section').forEach(section => {
+            section.style.display = 'none';
+        });
+
+        // 移除所有活动链接
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.classList.remove('active');
+        });
+
+        // 显示目标部分
+        const targetSection = document.getElementById(sectionId + 'Section');
+        if (targetSection) {
+            targetSection.style.display = 'block';
+        }
+
+        // 激活对应链接
+        const targetLink = document.querySelector(`[onclick="showSection('${sectionId}')"]`);
+        if (targetLink) {
+            targetLink.classList.add('active');
+        }
+
+        // 更新页面标题
+        const titles = {
+            'dashboard': '系统管理员仪表板',
+            'userManagement': '用户管理',
+            'alarmRules': '告警规则配置',
+            'backupRestore': '备份与恢复',
+            'monitoring': '系统监控',
+            'persistence': '持久层测试'
+        };
+        document.getElementById('pageTitle').textContent = titles[sectionId] || '系统管理';
+
+        currentSection = sectionId;
+
+        // 加载对应数据
+        switch(sectionId) {
+            case 'dashboard':
+                loadDashboardStats();
+                break;
+            case 'userManagement':
+                loadUsers();
+                break;
+            case 'alarmRules':
+                loadAlarmRules();
+                break;
+            case 'backupRestore':
+                loadBackups();
+                break;
+            case 'monitoring':
+                loadMonitoringData();
+                break;
+        }
+    }
+
+    // 加载仪表板统计数据
+    // async function loadDashboardStats() {
+    //     try {
+    //         const response = await fetch('/api/dashboard/stats');
+    //         if (response.ok) {
+    //             const data = await response.json();
+    //
+    //             // 立即更新显示
+    //             if (data.total_users !== undefined) {
+    //                 document.getElementById('userCount').textContent = data.total_users;
+    //             }
+    //
+    //             if (data.total_devices !== undefined) {
+    //                 document.getElementById('deviceCount').textContent = data.total_devices;
+    //             }
+    //
+    //             if (data.alarms) {
+    //                 const totalAlarms = data.alarms.total || 0;
+    //                 document.getElementById('alarmCount').textContent = totalAlarms;
+    //             }
+    //
+    //             // 同时加载数据库状态更新数据库大小
+    //             try {
+    //                 const statusResponse = await fetch('/api/database/status');
+    //                 if (statusResponse.ok) {
+    //                     const statusData = await statusResponse.json();
+    //                     if (statusData.database_size && statusData.database_size.total_mb !== undefined) {
+    //                         const totalMB = statusData.database_size.total_mb || 0;
+    //                         document.getElementById('dbSize').textContent = totalMB.toFixed(2) + ' MB';
+    //                     }
+    //
+    //                     if (statusData.database_info && statusData.database_info.uptime) {
+    //                         document.getElementById('systemUptime').textContent = statusData.database_info.uptime;
+    //                     }
+    //                 }
+    //             } catch (dbError) {
+    //                 console.error('加载数据库状态失败:', dbError);
+    //             }
+    //
+    //             // 加载最近活动
+    //             if (data.recent_activities) {
+    //                 updateRecentActivities(data.recent_activities);
+    //             }
+    //         } else {
+    //             console.error('仪表板数据加载失败:', response.status);
+    //         }
+    //     } catch (error) {
+    //         console.error('加载仪表板统计数据失败:', error);
+    //     }
+    // }
+
+
+        async function loadDashboardStats() {
+    try {
+        console.log('开始加载仪表板数据...');
+        const response = await fetch('/api/dashboard/stats');
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+        }
+
+        const data = await response.json();
+
+        if (!data.success) {
+            throw new Error(data.error || '获取仪表板数据失败');
+        }
+
+        // 更新显示
+        document.getElementById('userCount').textContent = data.total_users || 0;
+        document.getElementById('deviceCount').textContent = data.total_devices || 0;
+        document.getElementById('alarmCount').textContent = data.alarms?.total || 0;
+
+        // 加载数据库大小
+        try {
+            const statusResponse = await fetch('/api/database/status');
+            if (statusResponse.ok) {
+                const statusData = await statusResponse.json();
+                if (statusData.success && statusData.database_info) {
+                    // 更新数据库大小显示
+                    const dbSize = statusData.database_info.size_mb || 0;
+                    document.getElementById('dbSize').textContent = dbSize.toFixed(2) + ' MB';
+
+                    // 更新系统运行时间
+                    if (statusData.database_info.uptime) {
+                        document.getElementById('systemUptime').textContent = statusData.database_info.uptime;
+                    }
+                }
+            }
+        } catch (dbError) {
+            console.warn('加载数据库状态失败:', dbError);
+        }
+
+        // 更新最近活动
+        if (data.recent_activities) {
+            updateRecentActivities(data.recent_activities);
+        }
+
+    } catch (error) {
+        console.error('加载仪表板统计数据失败:', error);
+        // 显示错误信息
+        document.getElementById('userCount').textContent = '错误';
+        document.getElementById('deviceCount').textContent = '错误';
+        document.getElementById('alarmCount').textContent = '错误';
+        document.getElementById('dbSize').textContent = '错误';
+    }
+}
+
+
+    // 更新最近活动
+    function updateRecentActivities(activities) {
+        const tbody = document.querySelector('#recentAlarmsTable tbody');
+        if (!tbody) return;
+
+        tbody.innerHTML = '';
+
+        if (!activities || activities.length === 0) {
+            const row = document.createElement('tr');
+            row.innerHTML = `<td colspan="4" class="text-center">暂无活动记录</td>`;
+            tbody.appendChild(row);
+            return;
+        }
+
+        activities.forEach(activity => {
+            const row = document.createElement('tr');
+            let timeStr = '-';
+            try {
+                timeStr = moment(activity.操作时间).format('MM-DD HH:mm');
+            } catch (e) {
+                timeStr = activity.操作时间 || '-';
+            }
+
+            row.innerHTML = `
+                <td>${timeStr}</td>
+                <td>${activity.真实姓名 || activity.操作人员 || '-'}</td>
+                <td>${activity.操作内容 || '-'}</td>
+                <td>
+                    <span class="badge ${activity.操作结果 === '成功' ? 'bg-success' : 'bg-danger'}">
+                        ${activity.操作结果 || '-'}
+                    </span>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
+    // 加载用户数据
+    async function loadUsers() {
+        try {
+            console.log('开始加载用户数据...');
+            const response = await fetch('/api/users');
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+            }
+
+            const data = await response.json();
+
+            // 检查是否有success标志
+            if (data.success === false) {
+                throw new Error(data.error || '获取用户数据失败');
+            }
+
+            users = data.users || [];
+            console.log('加载到用户数量:', users.length);
+
+            updateUsersTable(users);
+
+            // 更新用户总数显示
+            document.getElementById('userCount').textContent = users.length;
+
+        } catch (error) {
+            console.error('加载用户数据失败:', error);
+            // 显示错误信息
+            const tbody = document.querySelector('#usersTable tbody');
+            if (tbody) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="9" class="text-center text-danger">
+                            加载用户数据失败: ${error.message}
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+    }
+
+    // 更新用户表格
+    function updateUsersTable(users) {
+        const tbody = document.querySelector('#usersTable tbody');
+        if (!tbody) {
+            console.error('找不到用户表格tbody');
+            return;
+        }
+
+        tbody.innerHTML = '';
+
+        if (!users || users.length === 0) {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td colspan="9" class="text-center text-muted">
+                    暂无用户数据
+                </td>
+            `;
+            tbody.appendChild(row);
+            return;
+        }
+
+        users.forEach(user => {
+            const row = document.createElement('tr');
+
+            // 格式化时间
+            let lastLogin = '从未登录';
+            if (user['上次登录的时间']) {
+                try {
+                    lastLogin = moment(user['上次登录的时间']).format('YYYY-MM-DD HH:mm');
+                } catch (e) {
+                    lastLogin = user['上次登录的时间'];
+                }
+            }
+
+            const userId = user['用户ID'] || '-';
+            const realName = user['真实姓名'] || '-';
+
+            row.innerHTML = `
+                <td>${userId}</td>
+                <td>${user['登录账号'] || '-'}</td>
+                <td>${realName}</td>
+                <td>
+                    <span class="badge ${getRoleBadge(user['用户角色'])}">
+                        ${user['用户角色'] || '-'}
+                    </span>
+                </td>
+                <td>${user['厂区名称'] || '-'}</td>
+                <td>${user['手机号码'] || '-'}</td>
+                <td>${lastLogin}</td>
+                <td>
+                    ${user['状态'] === '已锁定' ?
+                        '<span class="badge bg-danger">已锁定</span>' :
+                    user['状态'] === '从未登录' ?
+                        '<span class="badge bg-warning">从未登录</span>' :
+                        '<span class="badge bg-success">正常</span>'}
+                </td>
+                <td>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button class="btn btn-outline-primary" onclick="editUser('${userId}')"
+                                title="编辑用户">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn btn-outline-danger" onclick="deleteUser('${userId}', '${realName}')"
+                                title="删除用户">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+        // 显示当前用户
+        function loadCurrentUser() {
+            const username = sessionStorage.getItem('username') || '系统管理员';
+            document.getElementById('currentUser').textContent = username;
+        }
+
+        // 显示指定部分
+        function showSection(sectionId) {
+            // 隐藏所有部分
+            document.querySelectorAll('.section').forEach(section => {
+                section.style.display = 'none';
+            });
+
+            // 移除所有活动链接
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+
+            // 显示目标部分
+            const targetSection = document.getElementById(sectionId + 'Section');
+            if (targetSection) {
+                targetSection.style.display = 'block';
+            }
+
+            // 激活对应链接
+            const targetLink = document.querySelector(`[onclick="showSection('${sectionId}')"]`);
+            if (targetLink) {
+                targetLink.classList.add('active');
+            }
+
+            // 更新页面标题
+            const titles = {
+                'dashboard': '系统管理员仪表板',
+                'userManagement': '用户管理',
+                'alarmRules': '告警规则配置',
+                'backupRestore': '备份与恢复',
+                'monitoring': '系统监控',
+                'persistence': '持久层测试'
+            };
+            document.getElementById('pageTitle').textContent = titles[sectionId] || '系统管理';
+
+            currentSection = sectionId;
+
+            // 加载对应数据
+            switch(sectionId) {
+                case 'dashboard':
+                    loadDashboardStats();
+                    break;
+                case 'userManagement':
+                    loadUsers();
+                    break;
+                case 'alarmRules':
+                    loadAlarmRules();
+                    break;
+                case 'backupRestore':
+                    loadBackups();
+                    break;
+                case 'monitoring':
+                    loadMonitoringData();
+                    break;
+            }
+        }
+        function logout() {
+    if (confirm('确定要退出登录吗？')) {
+        window.location.href = '/logout';
+    }
+}
+
+        // 加载仪表板统计数据
+        // async function loadDashboardStats() {
+        //     try {
+        //         const response = await fetch('/api/dashboard/stats');
+        //         if (response.ok) {
+        //             const data = await response.json();
+        //
+        //             if (data.total_users !== undefined) {
+        //                 document.getElementById('userCount').textContent = data.total_users;
+        //             }
+        //
+        //             if (data.total_devices !== undefined) {
+        //                 document.getElementById('deviceCount').textContent = data.total_devices;
+        //             }
+        //
+        //             if (data.alarms && data.alarms.total !== undefined) {
+        //                 document.getElementById('alarmCount').textContent = data.alarms.total;
+        //             }
+        //
+        //             // 加载数据库状态
+        //             const statusResponse = await fetch('/api/database/status');
+        //             if (statusResponse.ok) {
+        //                 const statusData = await statusResponse.json();
+        //                 if (statusData.database_size) {
+        //                     const totalMB = statusData.database_size.total_mb || 0;
+        //                     document.getElementById('dbSize').textContent = totalMB.toFixed(2) + ' MB';
+        //                 }
+        //
+        //                 if (statusData.database_info && statusData.database_info.uptime) {
+        //                     document.getElementById('systemUptime').textContent = statusData.database_info.uptime;
+        //                 }
+        //             }
+        //
+        //             // 加载最近活动
+        //             if (data.recent_activities) {
+        //                 updateRecentActivities(data.recent_activities);
+        //             }
+        //         }
+        //     } catch (error) {
+        //         console.error('加载仪表板统计数据失败:', error);
+        //     }
+        // }
+        // 加载仪表板统计数据
+async function loadDashboardStats() {
+    try {
+        const response = await fetch('/api/dashboard/stats');
+        if (response.ok) {
+            const data = await response.json();
+
+            // 立即更新显示
+            if (data.total_users !== undefined) {
+                document.getElementById('userCount').textContent = data.total_users;
+            }
+
+            if (data.total_devices !== undefined) {
+                document.getElementById('deviceCount').textContent = data.total_devices;
+            }
+
+            if (data.alarms && data.alarms.total !== undefined) {
+                document.getElementById('alarmCount').textContent = data.alarms.total;
+            }
+
+            // 同时加载数据库状态更新数据库大小
+            const statusResponse = await fetch('/api/database/status');
+            if (statusResponse.ok) {
+                const statusData = await statusResponse.json();
+                if (statusData.database_size && statusData.database_size.total_mb !== undefined) {
+                    const totalMB = statusData.database_size.total_mb || 0;
+                    document.getElementById('dbSize').textContent = totalMB.toFixed(2) + ' MB';
+                }
+
+                if (statusData.database_info && statusData.database_info.uptime) {
+                    document.getElementById('systemUptime').textContent = statusData.database_info.uptime;
+                }
+            }
+
+            // 加载最近活动
+            if (data.recent_activities) {
+                updateRecentActivities(data.recent_activities);
+            }
+        } else {
+            console.error('仪表板数据加载失败:', response.status);
+        }
+    } catch (error) {
+        console.error('加载仪表板统计数据失败:', error);
+    }
+}
+
+        // 更新最近活动
+        function updateRecentActivities(activities) {
+            const tbody = document.querySelector('#recentAlarmsTable tbody');
+            tbody.innerHTML = '';
+
+            activities.forEach(activity => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${moment(activity.操作时间).format('MM-DD HH:mm')}</td>
+                    <td>${activity.真实姓名 || activity.操作人员}</td>
+                    <td>${activity.操作内容}</td>
+                    <td>
+                        <span class="badge ${activity.操作结果 === '成功' ? 'bg-success' : 'bg-danger'}">
+                            ${activity.操作结果}
+                        </span>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // 加载用户数据
+        // async function loadUsers() {
+        //     try {
+        //         const response = await fetch('/api/users');
+        //         if (response.ok) {
+        //             const data = await response.json();
+        //             users = data.users || [];
+        //             updateUsersTable(users);
+        //         }
+        //     } catch (error) {
+        //         console.error('加载用户数据失败:', error);
+        //     }
+        // }
+        async function loadUsers() {
+    try {
+        console.log('开始加载用户数据...');
+        const response = await fetch('/api/users');
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+        }
+
+        const data = await response.json();
+
+        // 检查是否有success标志
+        if (!data.success) {
+            throw new Error(data.error || '获取用户数据失败');
+        }
+
+        users = data.users || [];
+        console.log('加载到用户数量:', users.length);
+
+        updateUsersTable(users);
+
+        // 更新用户总数显示
+        document.getElementById('userCount').textContent = users.length;
+
+    } catch (error) {
+        console.error('加载用户数据失败:', error);
+        // 显示错误信息
+        const tbody = document.querySelector('#usersTable tbody');
+        if (tbody) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="9" class="text-center text-danger">
+                        加载用户数据失败: ${error.message}
+                    </td>
+                </tr>
+            `;
+        }
+    }
+}
+
+        // 更新用户表格
+        function updateUsersTable(users) {
+            const tbody = document.querySelector('#usersTable tbody');
+            tbody.innerHTML = '';
+
+            users.forEach(user => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${user.用户ID}</td>
+                    <td>${user.登录账号}</td>
+                    <td>${user.真实姓名}</td>
+                    <td>
+                        <span class="badge ${getRoleBadge(user.用户角色)}">
+                            ${user.用户角色}
+                        </span>
+                    </td>
+                    <td>${user.厂区名称 || '-'}</td>
+                    <td>${user.手机号码 || '-'}</td>
+                    <td>
+                        ${user.上次登录的时间 ?
+                            moment(user.上次登录的时间).format('YYYY-MM-DD HH:mm') :
+                            '从未登录'}
+                    </td>
+                    <td>
+                        ${user.状态 === '已锁定' ?
+                            '<span class="badge bg-danger">已锁定</span>' :
+                        user.状态 === '未登录' ?
+                            '<span class="badge bg-warning">未登录</span>' :
+                            '<span class="badge bg-success">正常</span>'}
+                    </td>
+                    <td>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button class="btn btn-outline-primary" onclick="editUser('${user.用户ID}')"
+                                    title="编辑用户">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <button class="btn btn-outline-danger" onclick="deleteUser('${user.用户ID}', '${user.真实姓名}')"
+                                    title="删除用户">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // 显示添加用户模态框
+        function showAddUserModal() {
+            const modal = new bootstrap.Modal(document.getElementById('addUserModal'));
+            modal.show();
+        }
+
+        // 保存用户
+        async function saveUser() {
+            const form = document.getElementById('addUserForm');
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+
+            try {
+                const response = await fetch('/api/users', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                if (response.ok) {
+                    alert('用户添加成功');
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('addUserModal'));
+                    modal.hide();
+                    form.reset();
+                    loadUsers();
+                } else {
+                    const error = await response.json();
+                    alert('添加失败: ' + error.error);
+                }
+            } catch (error) {
+                console.error('保存用户失败:', error);
+                alert('保存失败，请检查网络连接');
+            }
+        }
+
+        // 删除用户
+        // async function deleteUser(userId, userName) {
+        //     if (!confirm(`确定要删除用户 "${userName}" 吗？`)) {
+        //         return;
+        //     }
+        //
+        //     try {
+        //         const response = await fetch(`/api/users/${userId}`, {
+        //             method: 'DELETE'
+        //         });
+        //
+        //         if (response.ok) {
+        //             alert('用户删除成功');
+        //             loadUsers();
+        //         } else {
+        //             const error = await response.json();
+        //             alert('删除失败: ' + error.error);
+        //         }
+        //     } catch (error) {
+        //         console.error('删除用户失败:', error);
+        //         alert('删除失败，请检查网络连接');
+        //     }
+        // }
+
+        async function deleteUser(userId, userName) {
+    if (!confirm(`确定要删除用户 "${userName}" 吗？此操作不可恢复。`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/users/${userId}`, {
+            method: 'DELETE'
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || '删除失败');
+        }
+
+        const result = await response.json();
+
+        if (result.success) {
+            alert('用户删除成功');
+            loadUsers(); // 重新加载用户列表
+        } else {
+            throw new Error(result.error);
+        }
+    } catch (error) {
+        console.error('删除用户失败:', error);
+        alert('删除失败: ' + error.message);
+    }
+}
+
+        // 加载告警规则
+        // async function loadAlarmRules() {
+        //     try {
+        //         const response = await fetch('/api/alarm-rules');
+        //         if (response.ok) {
+        //             const data = await response.json();
+        //             alarmRules = data.rules || [];
+        //             updateAlarmRulesTable(alarmRules);
+        //
+        //             // 更新设备类型下拉框
+        //             const deviceTypeSelect = document.querySelector('#addAlarmRuleModal select[name="device_type"]');
+        //             if (deviceTypeSelect && data.device_types) {
+        //                 let html = '<option value="">请选择设备类型...</option>';
+        //                 data.device_types.forEach(type => {
+        //                     html += `<option value="${type}">${type}</option>`;
+        //                 });
+        //                 deviceTypeSelect.innerHTML = html;
+        //             }
+        //         }
+        //     } catch (error) {
+        //         console.error('加载告警规则失败:', error);
+        //     }
+        // }
+
+        async function loadAlarmRules() {
+    try {
+        console.log('开始加载告警规则...');
+        const response = await fetch('/api/alarm-rules');
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+        }
+
+        const data = await response.json();
+
+        if (!data.success) {
+            throw new Error(data.error || '获取告警规则失败');
+        }
+
+        alarmRules = data.rules || [];
+        updateAlarmRulesTable(alarmRules);
+
+        // 更新设备类型下拉框
+        const deviceTypeSelect = document.querySelector('#addAlarmRuleModal select[name="device_type"]');
+        if (deviceTypeSelect && data.device_types) {
+            let html = '<option value="">请选择设备类型...</option>';
+            data.device_types.forEach(type => {
+                html += `<option value="${type}">${type}</option>`;
+            });
+            deviceTypeSelect.innerHTML = html;
+        }
+
+    } catch (error) {
+        console.error('加载告警规则失败:', error);
+        // 显示错误信息
+        const tbody = document.querySelector('#alarmRulesTable tbody');
+        if (tbody) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="9" class="text-center text-danger">
+                        加载告警规则失败: ${error.message}
+                    </td>
+                </tr>
+            `;
+        }
+    }
+}
+        // 更新告警规则表格
+        function updateAlarmRulesTable(rules) {
+            const tbody = document.querySelector('#alarmRulesTable tbody');
+            tbody.innerHTML = '';
+
+            rules.forEach(rule => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${rule.规则名称}</td>
+                    <td>${rule.设备类型}</td>
+                    <td>${rule.告警参数}</td>
+                    <td>${rule.告警条件}</td>
+                    <td>${rule.告警阈值}</td>
+                    <td>
+                        <span class="badge ${getAlarmLevelBadge(rule.告警等级)}">
+                            ${rule.告警等级}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge ${rule.启用状态 ? 'bg-success' : 'bg-secondary'}">
+                            ${rule.状态显示}
+                        </span>
+                    </td>
+                    <td>${moment(rule.创建时间).format('YYYY-MM-DD')}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteAlarmRule('${rule.规则ID}', '${rule.规则名称}')">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // 显示添加告警规则模态框
+        function showAddAlarmRuleModal() {
+            const modal = new bootstrap.Modal(document.getElementById('addAlarmRuleModal'));
+            modal.show();
+        }
+
+        // 保存告警规则
+        // 保存告警规则
+async function saveAlarmRule() {
+    const form = document.getElementById('addAlarmRuleForm');
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+
+    // 添加默认条件
+    data.condition = '>'; // 或者根据实际情况调整
+
+    // 添加调试信息
+    console.log('准备保存告警规则:', data);
+
+    try {
+        const response = await fetch('/api/alarm-rules', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            alert('告警规则添加成功');
+            const modal = bootstrap.Modal.getInstance(document.getElementById('addAlarmRuleModal'));
+            modal.hide();
+            form.reset();
+            loadAlarmRules(); // 重新加载规则列表
+        } else {
+            console.error('服务器返回错误:', result);
+            alert('添加失败: ' + (result.error || '未知错误'));
+        }
+    } catch (error) {
+        console.error('保存告警规则失败:', error);
+        alert('保存失败，请检查网络连接: ' + error.message);
+    }
+}
+
+        // 删除告警规则
+        async function deleteAlarmRule(ruleId, ruleName) {
+            if (!confirm(`确定要删除告警规则 "${ruleName}" 吗？`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/alarm-rules/${ruleId}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    alert('告警规则删除成功');
+                    loadAlarmRules();
+                } else {
+                    const error = await response.json();
+                    alert('删除失败: ' + error.error);
+                }
+            } catch (error) {
+                console.error('删除告警规则失败:', error);
+                alert('删除失败，请检查网络连接');
+            }
+        }
+
+        // 加载备份数据
+        async function loadBackups() {
+            try {
+                const response = await fetch('/api/database/backups');
+                if (response.ok) {
+                    const data = await response.json();
+                    updateBackupsTable(data.backups);
+                    updateBackupSelect(data.backup_files);
+
+                    if (data.backup_stats) {
+                        document.getElementById('totalBackups').textContent = data.backup_stats.total;
+                        document.getElementById('totalBackupSize').textContent =
+                            data.backup_stats.total_size ? data.backup_stats.total_size.toFixed(2) + ' MB' : '0 MB';
+                    }
+                }
+            } catch (error) {
+                console.error('加载备份数据失败:', error);
+            }
+        }
+
+        // 更新备份表格
+        function updateBackupsTable(backups) {
+            const tbody = document.querySelector('#backupsTable tbody');
+            tbody.innerHTML = '';
+
+            if (!backups) return;
+
+            backups.forEach(backup => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${moment(backup.备份时间).format('YYYY-MM-DD HH:mm:ss')}</td>
+                    <td>${backup.备份文件.split('/').pop()}</td>
+                    <td>
+                        <span class="badge bg-info">${backup.备份类型}</span>
+                    </td>
+                    <td>${backup.备份大小 ? backup.备份大小.toFixed(2) + ' MB' : '未知'}</td>
+                    <td>
+                        <span class="badge ${backup.完成状态 === '成功' ? 'bg-success' : 'bg-danger'}">
+                            ${backup.完成状态}
+                        </span>
+                    </td>
+                    <td>${backup.操作人员姓名 || backup.操作人员 || '系统'}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-success" onclick="downloadBackup('${backup.备份文件.split('/').pop()}')"
+                                ${backup.完成状态 !== '成功' ? 'disabled' : ''}>
+                            <i class="bi bi-download"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // 更新备份选择框
+        function updateBackupSelect(backupFiles) {
+            const select = document.getElementById('backupSelect');
+            select.innerHTML = '<option value="">请选择备份文件...</option>';
+
+            if (backupFiles && backupFiles.length > 0) {
+                backupFiles.forEach(file => {
+                    const option = document.createElement('option');
+                    option.value = file.filepath;
+                    option.textContent = `${file.filename} (${file.size_mb}MB)`;
+                    select.appendChild(option);
+                });
+            }
+
+            select.addEventListener('change', function() {
+                const restoreButton = document.getElementById('restoreButton');
+                restoreButton.disabled = !this.value;
+            });
+        }
+
+        // 执行备份
+        async function performBackup() {
+            if (!confirm('确定要执行数据库备份吗？备份过程可能需要几分钟。')) {
+                return;
+            }
+
+            const modal = new bootstrap.Modal(document.getElementById('backupProgressModal'));
+            modal.show();
+
+            try {
+                const response = await fetch('/api/database/backup', {
+                    method: 'POST'
+                });
+
+                if (response.ok) {
+                    modal.hide();
+                    alert('备份成功完成！');
+                    loadBackups();
+                } else {
+                    const error = await response.json();
+                    modal.hide();
+                    alert('备份失败: ' + error.error);
+                }
+            } catch (error) {
+                console.error('执行备份失败:', error);
+                modal.hide();
+                alert('备份失败，请检查网络连接');
+            }
+        }
+
+        // 执行恢复
+        async function performRestore() {
+            const backupFile = document.getElementById('backupSelect').value;
+
+            if (!backupFile) {
+                alert('请选择备份文件');
+                return;
+            }
+
+            if (!confirm('警告：恢复操作将覆盖当前数据库数据，确定要继续吗？')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/database/restore', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        backup_file: backupFile,
+                        confirm: true
+                    })
+                });
+
+                if (response.ok) {
+                    alert('恢复成功完成！系统将自动刷新。');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                } else {
+                    const error = await response.json();
+                    alert('恢复失败: ' + error.error);
+                }
+            } catch (error) {
+                console.error('执行恢复失败:', error);
+                alert('恢复失败，请检查网络连接');
+            }
+        }
+
+        // 下载备份
+        function downloadBackup(filename) {
+            window.location.href = `/api/database/backup/download/${filename}`;
+        }
+
+        // 加载监控数据
+        // async function loadMonitoringData() {
+        //     try {
+        //         const response = await fetch('/api/database/status');
+        //         if (response.ok) {
+        //             const data = await response.json();
+        //             updateMonitoringData(data);
+        //         }
+        //     } catch (error) {
+        //         console.error('加载监控数据失败:', error);
+        //     }
+        // }
+        async function loadMonitoringData() {
+    try {
+        console.log('开始加载监控数据...');
+        const response = await fetch('/api/database/status');
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+        }
+
+        const data = await response.json();
+
+        if (!data.success) {
+            throw new Error(data.error || '获取监控数据失败');
+        }
+
+        updateMonitoringData(data);
+
+    } catch (error) {
+        console.error('加载监控数据失败:', error);
+        // 显示错误信息
+        const tbody = document.querySelector('#tableSpaceTable tbody');
+        if (tbody) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="text-center text-danger">
+                        加载监控数据失败: ${error.message}
+                    </td>
+                </tr>
+            `;
+        }
+    }
+}
+
+        // 更新监控数据
+        // function updateMonitoringData(data) {
+        //     // 更新CPU和内存
+        //     if (data.system_info) {
+        //         document.getElementById('cpuProgress').style.width = data.system_info.memory_percent + '%';
+        //         document.getElementById('cpuPercent').textContent = data.system_info.memory_percent.toFixed(1) + '%';
+        //         document.getElementById('memoryProgress').style.width = data.system_info.memory_percent + '%';
+        //         document.getElementById('memoryPercent').textContent = data.system_info.memory_percent.toFixed(1) + '%';
+        //     }
+        //
+        //     if (data.database_info) {
+        //         document.getElementById('systemUptimeInfo').textContent = data.database_info.uptime;
+        //     }
+        //
+        //     if (data.connection_info) {
+        //         document.getElementById('currentConnections').textContent = data.connection_info.threads_connected;
+        //     }
+        //
+        //     // 更新表空间信息
+        //     if (data.table_stats) {
+        //         const tbody = document.querySelector('#tableSpaceTable tbody');
+        //         tbody.innerHTML = '';
+        //
+        //         data.table_stats.forEach(table => {
+        //             const row = document.createElement('tr');
+        //             row.innerHTML = `
+        //                 <td>${table.表名}</td>
+        //                 <td>${table.行数 ? parseInt(table.行数).toLocaleString() : '0'}</td>
+        //                 <td>${table['数据大小_MB'] ? parseFloat(table['数据大小_MB']).toFixed(2) + ' MB' : '0 MB'}</td>
+        //                 <td>${table['索引大小_MB'] ? parseFloat(table['索引大小_MB']).toFixed(2) + ' MB' : '0 MB'}</td>
+        //                 <td>${table['总大小_MB'] ? parseFloat(table['总大小_MB']).toFixed(2) + ' MB' : '0 MB'}</td>
+        //             `;
+        //             tbody.appendChild(row);
+        //         });
+        //     }
+        // }
+
+        function updateMonitoringData(data) {
+    // 更新CPU和内存
+    if (data.system_info) {
+        const cpuPercent = data.system_info.cpu_percent || 0;
+        const memoryPercent = data.system_info.memory_percent || 0;
+
+        document.getElementById('cpuProgress').style.width = cpuPercent + '%';
+        document.getElementById('cpuPercent').textContent = cpuPercent.toFixed(1) + '%';
+        document.getElementById('memoryProgress').style.width = memoryPercent + '%';
+        document.getElementById('memoryPercent').textContent = memoryPercent.toFixed(1) + '%';
+    }
+
+    if (data.database_info) {
+        document.getElementById('systemUptimeInfo').textContent = data.database_info.uptime || '-';
+        if (data.database_info.version) {
+            document.getElementById('dbVersion').textContent = data.database_info.version;
+        }
+    }
+
+    if (data.connection_info) {
+        document.getElementById('currentConnections').textContent = data.connection_info.threads_connected || 0;
+    }
+
+    // 更新表空间信息
+    if (data.table_stats) {
+        const tbody = document.querySelector('#tableSpaceTable tbody');
+        if (tbody) {
+            tbody.innerHTML = '';
+
+            data.table_stats.forEach(table => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${table.表名 || '-'}</td>
+                    <td>${table.行数 ? parseInt(table.行数).toLocaleString() : '0'}</td>
+                    <td>${table['数据大小_MB'] ? parseFloat(table['数据大小_MB']).toFixed(2) + ' MB' : '0 MB'}</td>
+                    <td>${table['索引大小_MB'] ? parseFloat(table['索引大小_MB']).toFixed(2) + ' MB' : '0 MB'}</td>
+                    <td>${table['总大小_MB'] ? parseFloat(table['总大小_MB']).toFixed(2) + ' MB' : '0 MB'}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+    }
+}
+
+        // 刷新监控
+        function refreshMonitoring() {
+            loadMonitoringData();
+        }
+
+        // ============ 持久层测试功能 ============
+
+let currentTestType = '';
+
+// 显示测试数据模态框
+function showTestDataModal(testType) {
+    currentTestType = testType;
+    const modalTitle = document.getElementById('testModalTitle');
+    const form = document.getElementById('testDataForm');
+
+    form.innerHTML = ''; // 清空表单
+
+    switch(testType) {
+        case 'addPVDevice':
+            modalTitle.textContent = '添加光伏设备';
+            loadAddPVDeviceForm(form);
+            break;
+        case 'addEnergyData':
+            modalTitle.textContent = '录入能耗监测数据';
+            loadAddEnergyDataForm(form);
+            break;
+        case 'addDevice':
+            modalTitle.textContent = '添加普通设备';
+            loadAddDeviceForm(form);
+            break;
+        case 'updateAlarm':
+            modalTitle.textContent = '更新告警状态';
+            loadUpdateAlarmForm(form);
+            break;
+        case 'updateEquipment':
+            modalTitle.textContent = '编辑设备台账';
+            loadUpdateEquipmentForm(form);
+            break;
+        case 'queryCircuit':
+            modalTitle.textContent = '查询回路数据';
+            loadQueryCircuitForm(form);
+            break;
+        case 'queryWorkOrder':
+            modalTitle.textContent = '查询运维工单';
+            loadQueryWorkOrderForm(form);
+            break;
+        case 'deleteAlarm':
+            modalTitle.textContent = '删除过期告警';
+            loadDeleteAlarmForm(form);
+            break;
+    }
+
+    const modal = new bootstrap.Modal(document.getElementById('testDataModal'));
+    modal.show();
+}
+
+// 加载添加光伏设备表单
+function loadAddPVDeviceForm(form) {
+    form.innerHTML = `
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">设备编号</label>
+                <input type="text" class="form-control" name="device_id"
+                       placeholder="自动生成" readonly>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">设备类型 *</label>
+                <select class="form-select" name="device_type" required>
+                    <option value="">请选择类型</option>
+                    <option value="逆变器">逆变器</option>
+                    <option value="汇流箱">汇流箱</option>
+                </select>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">装机容量(kW) *</label>
+                <input type="number" class="form-control" name="installed_capacity"
+                       step="0.01" min="0" required>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">投运时间</label>
+                <input type="date" class="form-control" name="commission_date">
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">生产厂家</label>
+                <input type="text" class="form-control" name="manufacturer">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">设备型号</label>
+                <input type="text" class="form-control" name="model">
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">校准周期(月)</label>
+                <input type="number" class="form-control" name="calibration_period"
+                       min="1" max="24" value="12">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">运行状态</label>
+                <select class="form-select" name="status">
+                    <option value="正常">正常</option>
+                    <option value="故障">故障</option>
+                    <option value="离线">离线</option>
+                    <option value="维护中">维护中</option>
+                </select>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12 mb-3">
+                <label class="form-label">通信协议</label>
+                <input type="text" class="form-control" name="protocol"
+                       placeholder="Modbus, MQTT等">
+            </div>
+        </div>
+    `;
+
+    // 自动生成设备编号
+    const deviceIdInput = form.querySelector('input[name="device_id"]');
+    deviceIdInput.value = `PV_${Date.now()}`;
+}
+
+// 加载添加能耗数据表单
+async function loadAddEnergyDataForm(form) {
+    // 先加载设备列表
+    const devices = await loadDevicesForSelect();
+
+    form.innerHTML = `
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">设备 *</label>
+                <select class="form-select" name="device_id" required>
+                    <option value="">请选择设备</option>
+                    ${devices.map(d =>
+                        `<option value="${d.设备编号}">${d.设备名称} (${d.设备编号})</option>`
+                    ).join('')}
+                </select>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">能耗值 *</label>
+                <input type="number" class="form-control" name="energy_value"
+                       step="0.01" min="0" required>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">单位 *</label>
+                <select class="form-select" name="unit" required>
+                    <option value="">请选择单位</option>
+                    <option value="kWh">kWh (电)</option>
+                    <option value="m³">m³ (水/天然气)</option>
+                    <option value="t">t (蒸汽)</option>
+                </select>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">数据质量</label>
+                <select class="form-select" name="data_quality">
+                    <option value="优">优</option>
+                    <option value="良">良</option>
+                    <option value="中">中</option>
+                    <option value="差">差</option>
+                </select>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">采集时间</label>
+                <input type="datetime-local" class="form-control" name="collection_time">
+            </div>
+        </div>
+    `;
+}
+
+// 加载添加普通设备表单
+async function loadAddDeviceForm(form) {
+    const factories = await loadFactories();
+
+    form.innerHTML = `
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">设备编号</label>
+                <input type="text" class="form-control" name="device_id"
+                       placeholder="自动生成" readonly>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">设备名称 *</label>
+                <input type="text" class="form-control" name="device_name" required>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">设备大类 *</label>
+                <select class="form-select" name="device_category" required>
+                    <option value="">请选择大类</option>
+                    <option value="配电设备">配电设备</option>
+                    <option value="光伏设备">光伏设备</option>
+                    <option value="能耗设备">能耗设备</option>
+                    <option value="其他">其他</option>
+                </select>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">设备类型</label>
+                <input type="text" class="form-control" name="device_type">
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">所属厂区</label>
+                <select class="form-select" name="factory_id">
+                    <option value="">请选择厂区</option>
+                    ${factories.map(f =>
+                        `<option value="${f.厂区编号}">${f.厂区名称}</option>`
+                    ).join('')}
+                </select>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">运行状态</label>
+                <select class="form-select" name="status">
+                    <option value="正常">正常</option>
+                    <option value="故障">故障</option>
+                    <option value="离线">离线</option>
+                    <option value="维护中">维护中</option>
+                    <option value="停用">停用</option>
+                </select>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12 mb-3">
+                <label class="form-label">安装位置描述</label>
+                <textarea class="form-control" name="location" rows="2"></textarea>
+            </div>
+        </div>
+    `;
+
+    // 自动生成设备编号
+    const deviceIdInput = form.querySelector('input[name="device_id"]');
+    deviceIdInput.value = `DEV_${Date.now()}`;
+}
+
+// 加载更新告警表单
+async function loadUpdateAlarmForm(form) {
+    const alarms = await loadAlarmsForSelect();
+
+    form.innerHTML = `
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">选择告警 *</label>
+                <select class="form-select" name="alarm_id" required
+                        onchange="onAlarmSelectChange(this)">
+                    <option value="">请选择告警</option>
+                    ${alarms.map(a =>
+                        `<option value="${a.告警ID}">${a.告警内容} (${a.告警ID})</option>`
+                    ).join('')}
+                </select>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">当前状态</label>
+                <input type="text" class="form-control" id="currentAlarmStatus"
+                       readonly>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">新状态 *</label>
+                <select class="form-select" name="status" required>
+                    <option value="未处理">未处理</option>
+                    <option value="处理中">处理中</option>
+                    <option value="已结案">已结案</option>
+                </select>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12 mb-3">
+                <label class="form-label">备注</label>
+                <textarea class="form-control" name="remark" rows="2"></textarea>
+            </div>
+        </div>
+    `;
+}
+
+// 加载编辑设备台账表单
+async function loadUpdateEquipmentForm(form) {
+    const devices = await loadDevicesForSelect();
+
+    form.innerHTML = `
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">选择设备 *</label>
+                <select class="form-select" name="device_id" required
+                        onchange="onEquipmentSelectChange(this)">
+                    <option value="">请选择设备</option>
+                    ${devices.map(d =>
+                        `<option value="${d.设备编号}">${d.设备名称} (${d.设备编号})</option>`
+                    ).join('')}
+                </select>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">型号规格</label>
+                <input type="text" class="form-control" name="model_spec">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">安装时间</label>
+                <input type="date" class="form-control" name="install_date">
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">质保期(月)</label>
+                <input type="number" class="form-control" name="warranty_period"
+                       min="0" max="240">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">报废状态</label>
+                <select class="form-select" name="scrap_status">
+                    <option value="正常使用">正常使用</option>
+                    <option value="已报废">已报废</option>
+                </select>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">维修记录</label>
+                <textarea class="form-control" name="maintenance_record" rows="2"></textarea>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">校准记录</label>
+                <textarea class="form-control" name="calibration_record" rows="2"></textarea>
+            </div>
+        </div>
+        <div id="scrapFields" style="display: none;">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">报废时间</label>
+                    <input type="date" class="form-control" name="scrap_date">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">报废原因</label>
+                    <input type="text" class="form-control" name="scrap_reason">
+                </div>
+            </div>
+        </div>
+    `;
+
+    // 监听报废状态变化
+    const scrapStatusSelect = form.querySelector('select[name="scrap_status"]');
+    const scrapFields = document.getElementById('scrapFields');
+    scrapStatusSelect.addEventListener('change', function() {
+        scrapFields.style.display = this.value === '已报废' ? 'block' : 'none';
+    });
+}
+
+// 加载查询回路数据表单
+async function loadQueryCircuitForm(form) {
+    form.innerHTML = `
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">开始时间 *</label>
+                <input type="datetime-local" class="form-control" name="start_time"
+                       value="${new Date(Date.now() - 24*60*60*1000).toISOString().slice(0, 16)}" required>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">结束时间 *</label>
+                <input type="datetime-local" class="form-control" name="end_time"
+                       value="${new Date().toISOString().slice(0, 16)}" required>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">回路编号</label>
+                <input type="text" class="form-control" name="circuit_id"
+                       placeholder="可留空查询所有回路">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">设备编号</label>
+                <input type="text" class="form-control" name="device_id"
+                       placeholder="可留空查询所有设备">
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="voltage_abnormal">
+                    <label class="form-check-label">只显示电压异常数据</label>
+                </div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="temp_abnormal">
+                    <label class="form-check-label">只显示温度异常数据</label>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">限制返回数量</label>
+                <input type="number" class="form-control" name="limit"
+                       min="1" max="1000" value="100">
+            </div>
+        </div>
+    `;
+}
+
+// 加载查询工单表单
+async function loadQueryWorkOrderForm(form) {
+    const devices = await loadDevicesForSelect();
+    const users = await loadMaintenanceUsers();
+
+    form.innerHTML = `
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">设备编号</label>
+                <select class="form-select" name="device_id">
+                    <option value="">请选择设备</option>
+                    ${devices.map(d =>
+                        `<option value="${d.设备编号}">${d.设备名称} (${d.设备编号})</option>`
+                    ).join('')}
+                </select>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">运维人员</label>
+                <select class="form-select" name="maintenance_person_id">
+                    <option value="">请选择运维人员</option>
+                    ${users.map(u =>
+                        `<option value="${u.用户ID}">${u.真实姓名} (${u.用户角色})</option>`
+                    ).join('')}
+                </select>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">开始时间</label>
+                <input type="datetime-local" class="form-control" name="start_time"
+                       value="${new Date(Date.now() - 7*24*60*60*1000).toISOString().slice(0, 16)}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">结束时间</label>
+                <input type="datetime-local" class="form-control" name="end_time"
+                       value="${new Date().toISOString().slice(0, 16)}">
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">复查状态</label>
+                <select class="form-select" name="review_status">
+                    <option value="">全部状态</option>
+                    <option value="通过">通过</option>
+                    <option value="未通过">未通过</option>
+                </select>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">限制返回数量</label>
+                <input type="number" class="form-control" name="limit"
+                       min="1" max="1000" value="100">
+            </div>
+        </div>
+    `;
+}
+
+// 加载删除告警表单
+function loadDeleteAlarmForm(form) {
+    form.innerHTML = `
+        <div class="row">
+            <div class="col-md-12 mb-3">
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    注意：此操作将删除已结案且过期的告警记录
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">删除几天前的告警？ *</label>
+                <input type="number" class="form-control" name="days"
+                       min="1" max="365" value="30" required>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">确认操作</label>
+                <div class="form-check mt-2">
+                    <input class="form-check-input" type="checkbox" id="confirmDelete" required>
+                    <label class="form-check-label" for="confirmDelete">
+                        我确认要删除过期告警记录
+                    </label>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// 提交测试数据
+async function submitTestData() {
+    const form = document.getElementById('testDataForm');
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+
+    try {
+        let response, result;
+
+        switch(currentTestType) {
+            case 'addPVDevice':
+                data.device_id = `PV_${Date.now()}`;
+                response = await fetch('/api/persistence/add-pv-device', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                break;
+
+            case 'addEnergyData':
+                data.data_id = `ENERGY_${Date.now()}`;
+                if (!data.collection_time) {
+                    data.collection_time = new Date().toISOString().slice(0, 19).replace('T', ' ');
+                }
+                response = await fetch('/api/persistence/add-energy-data', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                break;
+
+            case 'addDevice':
+                data.device_id = `DEV_${Date.now()}`;
+                response = await fetch('/api/persistence/add-device', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                break;
+
+            case 'updateAlarm':
+                response = await fetch('/api/persistence/update-alarm', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                break;
+
+            case 'updateEquipment':
+                data.ledger_id = `LEDGER_${Date.now()}`;
+                response = await fetch('/api/persistence/update-equipment-full', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                break;
+
+            case 'queryCircuit':
+                // 转换时间格式
+                if (data.start_time) {
+                    data.start_time = data.start_time.replace('T', ' ') + ':00';
+                }
+                if (data.end_time) {
+                    data.end_time = data.end_time.replace('T', ' ') + ':00';
+                }
+                response = await fetch('/api/persistence/query-circuit-data-full', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                break;
+
+            case 'queryWorkOrder':
+                // 转换时间格式
+                if (data.start_time) {
+                    data.start_time = data.start_time.replace('T', ' ') + ':00';
+                }
+                if (data.end_time) {
+                    data.end_time = data.end_time.replace('T', ' ') + ':00';
+                }
+                response = await fetch('/api/persistence/query-workorder-full', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                break;
+
+            case 'deleteAlarm':
+                response = await fetch('/api/persistence/delete-expired-alarm', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                break;
+        }
+
+        result = await response.json();
+
+        if (response.ok) {
+            // 关闭模态框
+            const modal = bootstrap.Modal.getInstance(document.getElementById('testDataModal'));
+            modal.hide();
+
+            // 显示成功信息
+            addTestResult(`✓ ${result.message || '操作成功'}`, 'success');
+
+            // 如果是查询操作，显示查询结果
+            if (currentTestType.includes('query') && result.data) {
+                displayQueryResult(result);
+            }
+
+            // 刷新数据预览
+            await loadTestData('devices');
+        } else {
+            addTestResult(`✗ 操作失败: ${result.error}`, 'error');
+        }
+    } catch (error) {
+        addTestResult(`✗ 操作异常: ${error.message}`, 'error');
+    }
+}
+
+// 添加测试结果
+function addTestResult(message, type = 'success') {
+    const resultsDiv = document.getElementById('testResults');
+    const resultDiv = document.createElement('div');
+    resultDiv.className = `alert alert-${type === 'error' ? 'danger' : 'success'} alert-dismissible fade show`;
+    resultDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    resultsDiv.appendChild(resultDiv);
+
+    // 自动滚动到底部
+    resultsDiv.scrollTop = resultsDiv.scrollHeight;
+}
+
+// 显示查询结果
+function displayQueryResult(result) {
+    const modal = new bootstrap.Modal(document.getElementById('testDataModal'));
+    const modalTitle = document.getElementById('testModalTitle');
+    const form = document.getElementById('testDataForm');
+
+    modalTitle.textContent = '查询结果';
+
+    let content = `
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i>
+            查询到 ${result.count} 条记录
+        </div>
+    `;
+
+    // 如果有统计信息，显示统计
+    if (result.stats) {
+        content += `
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h6 class="mb-0">统计信息</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+        `;
+
+        for (const [key, value] of Object.entries(result.stats)) {
+            content += `
+                <div class="col-md-4 mb-2">
+                    <small class="text-muted">${key}</small>
+                    <div><strong>${value}</strong></div>
+                </div>
+            `;
+        }
+
+        content += `
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // 显示数据表格
+    if (result.data && result.data.length > 0) {
+        content += `
+            <div class="table-responsive">
+                <table class="table table-sm table-hover">
+                    <thead>
+                        <tr>
+                            ${Object.keys(result.data[0]).map(key =>
+                                `<th>${key}</th>`
+                            ).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${result.data.slice(0, 10).map(row =>
+                            `<tr>
+                                ${Object.values(row).map(val =>
+                                    `<td>${val || ''}</td>`
+                                ).join('')}
+                            </tr>`
+                        ).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+        if (result.data.length > 10) {
+            content += `
+                <div class="alert alert-secondary mt-3">
+                    显示前10条记录，共${result.data.length}条
+                </div>
+            `;
+        }
+    } else {
+        content += `
+            <div class="alert alert-warning">
+                没有查询到数据
+            </div>
+        `;
+    }
+
+    form.innerHTML = content;
+
+    // 修改按钮
+    const footer = document.querySelector('#testDataModal .modal-footer');
+    footer.innerHTML = `
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+        <button type="button" class="btn btn-success" onclick="exportQueryResult()">
+            <i class="bi bi-download"></i> 导出数据
+        </button>
+    `;
+
+    modal.show();
+}
+
+// 加载设备列表用于下拉框
+async function loadDevicesForSelect() {
+    try {
+        const response = await fetch('/api/persistence/get-devices');
+        if (response.ok) {
+            const data = await response.json();
+            return data.devices || [];
+        }
+    } catch (error) {
+        console.error('加载设备列表失败:', error);
+    }
+    return [];
+}
+
+// 加载告警列表用于下拉框
+async function loadAlarmsForSelect() {
+    try {
+        const response = await fetch('/api/persistence/get-alarms');
+        if (response.ok) {
+            const data = await response.json();
+            return data.alarms || [];
+        }
+    } catch (error) {
+        console.error('加载告警列表失败:', error);
+    }
+    return [];
+}
+
+// 加载厂区列表
+async function loadFactories() {
+    try {
+        const response = await fetch('/api/persistence/get-factories');
+        if (response.ok) {
+            const data = await response.json();
+            return data.factories || [];
+        }
+    } catch (error) {
+        console.error('加载厂区列表失败:', error);
+    }
+    return [];
+}
+
+// 加载运维人员列表
+async function loadMaintenanceUsers() {
+    try {
+        const response = await fetch('/api/persistence/get-maintenance-users');
+        if (response.ok) {
+            const data = await response.json();
+            return data.users || [];
+        }
+    } catch (error) {
+        console.error('加载运维人员列表失败:', error);
+    }
+    return [];
+}
+
+// 加载测试数据
+async function loadTestData(type) {
+    try {
+        let url, response, data;
+
+        switch(type) {
+            case 'devices':
+                url = '/api/persistence/device-list';
+                break;
+            case 'energy':
+                url = '/api/persistence/energy-data-list?limit=20';
+                break;
+            case 'alarms':
+                url = '/api/persistence/alarm-list?limit=20';
+                break;
+            case 'workorders':
+                url = '/api/persistence/workorder-list?limit=20';
+                break;
+        }
+
+        response = await fetch(url);
+        if (response.ok) {
+            data = await response.json();
+            updateTestDataTable(data.data || []);
+        }
+    } catch (error) {
+        console.error(`加载${type}数据失败:`, error);
+    }
+}
+
+// 更新测试数据表格
+function updateTestDataTable(data) {
+    const header = document.getElementById('testDataHeader');
+    const body = document.getElementById('testDataBody');
+
+    header.innerHTML = '';
+    body.innerHTML = '';
+
+    if (!data || data.length === 0) {
+        const row = document.createElement('tr');
+        row.innerHTML = `<td colspan="5" class="text-center">没有数据</td>`;
+        body.appendChild(row);
+        return;
+    }
+
+    // 创建表头
+    const headers = Object.keys(data[0]);
+    headers.forEach(headerText => {
+        const th = document.createElement('th');
+        th.textContent = headerText;
+        header.appendChild(th);
+    });
+
+    // 创建数据行
+    data.forEach(rowData => {
+        const row = document.createElement('tr');
+        headers.forEach(header => {
+            const td = document.createElement('td');
+            let cellValue = rowData[header];
+
+            if (cellValue instanceof Date) {
+                cellValue = moment(cellValue).format('YYYY-MM-DD HH:mm:ss');
+            } else if (cellValue === null || cellValue === undefined) {
+                cellValue = '-';
+            } else if (typeof cellValue === 'boolean') {
+                cellValue = cellValue ? '是' : '否';
+            }
+
+            td.textContent = cellValue;
+            td.style.maxWidth = '200px';
+            td.style.overflow = 'hidden';
+            td.style.textOverflow = 'ellipsis';
+            td.style.whiteSpace = 'nowrap';
+            row.appendChild(td);
+        });
+        body.appendChild(row);
+    });
+}
+
+// 清理无效数据
+async function deleteInvalidData() {
+    if (!confirm('确定要清理所有无效测试数据吗？')) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/persistence/delete-invalid-data', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        const result = await response.json();
+        if (response.ok) {
+            let message = '清理完成！';
+            if (result.result) {
+                message += ` 删除了: `;
+                const deletions = [];
+                for (const [key, value] of Object.entries(result.result)) {
+                    deletions.push(`${key}: ${value}条`);
+                }
+                message += deletions.join(', ');
+            }
+            addTestResult(`✓ ${message}`, 'success');
+
+            // 刷新数据预览
+            await loadTestData('devices');
+        } else {
+            addTestResult(`✗ 清理失败: ${result.error}`, 'error');
+        }
+    } catch (error) {
+        addTestResult(`✗ 清理异常: ${error.message}`, 'error');
+    }
+}
+
+// 运行所有测试
+async function runAllTests() {
+    addTestResult('开始运行所有持久层测试...', 'info');
+
+    // 运行不需要用户输入的测试
+    const tests = [
+        deleteInvalidData
+    ];
+
+    for (const test of tests) {
+        try {
+            await test();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        } catch (error) {
+            addTestResult(`测试执行异常: ${error.message}`, 'error');
+        }
+    }
+
+    addTestResult('所有持久层测试完成！', 'info');
+}
+
+// 初始化页面
+document.addEventListener('DOMContentLoaded', function() {
+    // 加载设备数据预览
+    loadTestData('devices');
+});
+    </script>
+</body>
+</html>

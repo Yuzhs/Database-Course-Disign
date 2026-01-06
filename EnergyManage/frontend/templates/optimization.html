@@ -1,0 +1,437 @@
+{% extends "base.html" %}
+
+{% block title %}能耗优化 - 智慧能源管理系统{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">能耗优化</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addPlanModal">
+            <i class="fas fa-plus"></i> 新增方案
+        </button>
+    </div>
+</div>
+
+<!-- 优化方案列表 -->
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>方案编号</th>
+                        <th>方案名称</th>
+                        <th>适用厂区</th>
+                        <th>能源类型</th>
+                        <th>预期节能</th>
+                        <th>实际节能</th>
+                        <th>预算费用</th>
+                        <th>当前状态</th>
+                        <th>创建时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for plan in optimization_plans %}
+                    <tr>
+                        <td>{{ plan.方案编号 }}</td>
+                        <td>{{ plan.方案名称 }}</td>
+                        <td>{{ plan.适用厂区名称 or '不限' }}</td>
+                        <td>{{ plan.能源类型 }}</td>
+                        <td>
+                            {% if plan.预期节能 %}
+                            <span class="text-success">{{ "%.1f"|format(plan.预期节能) }}%</span>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if plan.实际节能 %}
+                            <span class="text-success">{{ "%.1f"|format(plan.实际节能) }}%</span>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if plan.预算费用 %}
+                            ¥{{ "%.0f"|format(plan.预算费用) }}
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if plan.当前状态 == '执行中' %}
+                            <span class="badge bg-warning">执行中</span>
+                            {% elif plan.当前状态 == '已完成' %}
+                            <span class="badge bg-success">已完成</span>
+                            {% elif plan.当前状态 == '已审批' %}
+                            <span class="badge bg-info">已审批</span>
+                            {% elif plan.当前状态 == '已取消' %}
+                            <span class="badge bg-secondary">已取消</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ plan.当前状态 }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ plan.创建时间.strftime('%Y-%m-%d') if plan.创建时间 else '-' }}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary" 
+                                    onclick="showPlanDetail('{{ plan.方案编号 }}')">
+                                <i class="fas fa-eye"></i> 查看
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary"
+                                    onclick="changePlanStatus('{{ plan.方案编号 }}')">
+                                修改状态
+                            </button>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="10" class="text-center text-muted">
+                            <i class="fas fa-inbox fa-2x mb-2"></i><br>
+                            暂无优化方案
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 新增方案模态框 -->
+<div class="modal fade" id="addPlanModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">新增优化方案</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="optimizationForm">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">方案名称 *</label>
+                            <input type="text" class="form-control" name="plan_name" required>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">适用厂区</label>
+                            <select name="factory" class="form-select">
+                                <option value="">选择厂区</option>
+                                {% for factory in factories %}
+                                <option value="{{ factory.厂区名称 }}">{{ factory.厂区名称 }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">能源类型</label>
+                            <select name="energy_type" class="form-select">
+                                <option value="">选择能源类型</option>
+                                {% for type in energy_types %}
+                                <option value="{{ type }}">{{ type }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">预期节能（%）</label>
+                            <input type="number" class="form-control" name="expected_saving"
+                                   min="1" max="50" step="0.1">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">实施周期（天）</label>
+                            <input type="number" class="form-control" name="implementation_days"
+                                   min="7" max="365">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">预算费用（元）</label>
+                            <input type="number" class="form-control" name="budget">
+                        </div>
+
+                        <div class="col-md-12">
+                            <label class="form-label">负责人</label>
+                            <input type="text" class="form-control" name="responsible">
+                        </div>
+
+                        <div class="col-md-12">
+                            <label class="form-label">优化措施 *</label>
+                            <textarea class="form-control" name="measures" rows="4" required></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="saveOptimizationPlan()">
+                    保存方案
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 方案详情模态框 -->
+<div class="modal fade" id="planDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">方案详情</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="planDetailContent">
+                    <!-- 详情内容将通过JS动态加载 -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 保存优化方案
+function saveOptimizationPlan() {
+    const form = document.getElementById('optimizationForm');
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+
+    // 转换数值类型
+    data.expected_saving = parseFloat(data.expected_saving) || 0;
+    data.implementation_days = parseInt(data.implementation_days) || 0;
+    data.budget = parseFloat(data.budget) || 0;
+
+    fetch('/api/energy/optimization/save', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            alert('方案保存成功');
+            bootstrap.Modal.getInstance(document.getElementById('addPlanModal')).hide();
+            location.reload();
+        } else {
+            alert('保存失败：' + result.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('保存失败');
+    });
+}
+
+// 查看方案详情
+function showPlanDetail(planId) {
+    fetch(`/api/energy/optimization/detail/${planId}`)
+    .then(response => response.json())
+    .then(plan => {
+        // 检查是否有错误
+        if (plan.error) {
+            throw new Error(plan.error);
+        }
+
+        const detailContent = `
+            <h6>方案编号: ${plan.方案编号}</h6>
+            <hr>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>方案名称:</strong> ${plan.方案名称}</p>
+                    <p><strong>适用厂区:</strong> ${plan.适用厂区名称 || '不限'}</p>
+                    <p><strong>能源类型:</strong> ${plan.能源类型}</p>
+                    <p><strong>负责人:</strong> ${plan.负责人}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>预期节能:</strong> ${plan.预期节能 || 0}%</p>
+                    <p><strong>实际节能:</strong> ${plan.实际节能 || 0}%</p>
+                    <p><strong>实施周期:</strong> ${plan.实施周期 || 0}天</p>
+                    <p><strong>预算费用:</strong> ¥${plan.预算费用 || 0}</p>
+                    <p><strong>当前状态:</strong>
+                        <span class="badge ${plan.当前状态 === '执行中' ? 'bg-warning' : plan.当前状态 === '已完成' ? 'bg-success' : plan.当前状态 === '已审批' ? 'bg-info' : 'bg-secondary'}">
+                            ${plan.当前状态}
+                        </span>
+                    </p>
+                </div>
+            </div>
+
+            <div class="mt-3">
+                <h6>优化措施:</h6>
+                <div class="border rounded p-3 bg-light">
+                    ${plan.优化措施描述 ? plan.优化措施描述.replace(/\n/g, '<br>') : '暂无描述'}
+                </div>
+            </div>
+
+            <div class="mt-3">
+                <h6>时间信息:</h6>
+                <p>创建时间: ${plan.创建时间 || '暂无'}</p>
+                <p>更新时间: ${plan.更新时间 || '暂无更新'}</p>
+            </div>
+        `;
+
+        document.getElementById('planDetailContent').innerHTML = detailContent;
+        new bootstrap.Modal(document.getElementById('planDetailModal')).show();
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('获取详情失败: ' + error.message);
+    });
+}
+
+// 状态切换函数 - 简化版，点击状态按钮弹出模态框
+function togglePlanStatus(planId) {
+    // 直接弹出状态修改模态框
+    changeStatusModal(planId);
+}
+
+// 弹出状态修改模态框
+function changeStatusModal(planId) {
+    // 先检查模态框是否已存在，如果存在则移除
+    const existingModal = document.getElementById('statusChangeModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+
+    const modalHTML = `
+        <div class="modal fade" id="statusChangeModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">修改方案状态</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">新状态</label>
+                            <select id="newStatusSelect" class="form-select">
+                                <option value="已审批">已审批</option>
+                                <option value="执行中">执行中</option>
+                                <option value="已完成">已完成</option>
+                                <option value="已取消">已取消</option>
+                            </select>
+                        </div>
+                        <div class="mb-3" id="actualSavingContainer" style="display: none;">
+                            <label class="form-label">实际节能率（%）</label>
+                            <input type="number" id="actualSavingInput" class="form-control"
+                                   min="0" max="100" step="0.1" placeholder="请输入实际节能率">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                        <button type="button" class="btn btn-primary" onclick="updatePlanStatus('${planId}')">确认修改</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // 将模态框添加到body
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+    // 显示模态框
+    const modalElement = document.getElementById('statusChangeModal');
+    const modal = new bootstrap.Modal(modalElement);
+
+    // 监听状态选择变化
+    const statusSelect = document.getElementById('newStatusSelect');
+    const actualSavingContainer = document.getElementById('actualSavingContainer');
+
+    statusSelect.addEventListener('change', function() {
+        if (this.value === '已完成') {
+            actualSavingContainer.style.display = 'block';
+        } else {
+            actualSavingContainer.style.display = 'none';
+        }
+    });
+
+    modal.show();
+
+    // 当模态框关闭时，移除它
+    modalElement.addEventListener('hidden.bs.modal', function() {
+        modalElement.remove();
+    });
+}
+
+// 更新方案状态
+// 更新方案状态
+function updatePlanStatus(planId) {
+    const newStatus = document.getElementById('newStatusSelect').value;
+    const actualSavingInput = document.getElementById('actualSavingInput');
+
+    console.log('开始更新状态，planId:', planId);
+    console.log('新状态:', newStatus);
+
+    // 构建请求数据
+    const data = {
+        plan_id: planId,
+        status: newStatus
+    };
+
+    // 仅当状态为"已完成"时才需要实际节能率
+    if (newStatus === '已完成') {
+        const actualSaving = parseFloat(actualSavingInput.value);
+        console.log('实际节能率:', actualSaving);
+
+        // 验证实际节能率
+        if (isNaN(actualSaving) || actualSaving < 0 || actualSaving > 100) {
+            alert('请输入0-100之间的有效实际节能率');
+            return;
+        }
+
+        data.actual_saving = actualSaving;
+    }
+
+    console.log('发送数据:', data);
+
+    fetch('/api/energy/optimization/update_status', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => {
+        console.log('响应状态:', response.status);
+        return response.json();
+    })
+    .then(result => {
+        console.log('响应结果:', result);
+        if (result.success) {
+            alert('状态更新成功');
+
+            // 关闭模态框
+            const modalElement = document.getElementById('statusChangeModal');
+            if (modalElement) {
+                const modal = bootstrap.Modal.getInstance(modalElement);
+                modal.hide();
+            }
+
+            // 刷新页面
+            location.reload();
+        } else {
+            alert('更新失败：' + result.error);
+        }
+    })
+    .catch(error => {
+        console.error('错误详情:', error);
+        alert('更新失败: ' + error.message);
+    });
+}
+
+// 修改状态按钮点击事件（表格中的状态按钮）
+function changePlanStatus(planId) {
+    changeStatusModal(planId);
+}
+</script>
+{% endblock %}

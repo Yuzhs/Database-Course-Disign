@@ -1,0 +1,397 @@
+{% extends "base.html" %}
+
+{% block title %}数据分析 - 智慧能源管理系统{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">数据分析</h1>
+</div>
+
+<!-- 分析类型选择 -->
+<ul class="nav nav-tabs mb-4">
+    <li class="nav-item">
+        <a class="nav-link {% if analysis_type != 'high_consumption' %}active{% endif %}" 
+           href="{{ url_for('energy_analysis', type='peak_valley') }}">
+            峰谷分析
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if analysis_type == 'high_consumption' %}active{% endif %}" 
+           href="{{ url_for('energy_analysis', type='high_consumption') }}">
+            高耗能分析
+        </a>
+    </li>
+</ul>
+
+{% if analysis_type != 'high_consumption' %}
+<!-- 峰谷分析 -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" action="{{ url_for('energy_analysis') }}" id="peakValleyForm">
+            <input type="hidden" name="type" value="peak_valley">
+            
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">能源类型</label>
+                    <select name="energy_type" class="form-select" id="energyTypeSelect">
+                        {% for type in energy_types %}
+                        <option value="{{ type }}" 
+                            {% if energy_type == type %}selected{% endif %}>
+                            {{ type }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-4">
+                    <label class="form-label">选择厂区</label>
+                    <select name="factory_ids" class="form-select" id="factorySelect">
+                        <option value="">全部厂区</option>
+                        {% for factory in factories %}
+                        <option value="{{ factory.厂区编号 }}"
+                            {% if factory.厂区编号 in selected_factories %}selected{% endif %}>
+                            {{ factory.厂区名称 }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-4 align-self-end">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search"></i> 分析
+                    </button>
+                    <a href="{{ url_for('energy_analysis', type='peak_valley') }}" class="btn btn-secondary">
+                        <i class="fas fa-redo"></i> 重置
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if analysis_data %}
+<div class="row mb-3">
+    <div class="col-md-12">
+        <div class="alert alert-info">
+            <h6>分析范围：{{ analysis_data.selected_factory_name }}</h6>
+            <p class="mb-0">能源类型：{{ energy_type }} | 数据期间：最近30天</p>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">峰谷时段分布</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="peakValleyChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">分析结果</h5>
+            </div>
+            <div class="card-body">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>时段</th>
+                            <th>能耗</th>
+                            <th>占比</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for i in range(analysis_data.labels|length) %}
+                        <tr>
+                            <td>{{ analysis_data.labels[i] }}</td>
+                            <td>{{ "%.0f"|format(analysis_data.values_list[i]) }} kWh</td>
+                            <td>{{ analysis_data.percentages[i] }}%</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                
+                {% if analysis_data.percentages %}
+                <div class="alert alert-info">
+                    <h6>分析建议：</h6>
+                    <p class="mb-0">
+                        {% if analysis_data.percentages[3] < 20 %}
+                        低谷时段用能比例较低（{{ analysis_data.percentages[3] }}%），
+                        建议调整生产计划，增加低谷时段用能，可降低能耗成本。
+                        {% else %}
+                        峰谷用能结构合理，继续保持。
+                        {% endif %}
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% else %}
+<!-- 高耗能分析 -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" action="{{ url_for('energy_analysis') }}">
+            <input type="hidden" name="type" value="high_consumption">
+            
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">能源类型</label>
+                    <select name="energy_type" class="form-select">
+                        {% for type in energy_types %}
+                        <option value="{{ type }}" 
+                            {% if energy_type == type %}selected{% endif %}>
+                            {{ type }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-4">
+                    <label class="form-label">选择厂区</label>
+                    <select name="factory_ids" class="form-select">
+                        <option value="">全部厂区</option>
+                        {% for factory in factories %}
+                        <option value="{{ factory.厂区编号 }}"
+                            {% if factory.厂区编号 in selected_factories %}selected{% endif %}>
+                            {{ factory.厂区名称 }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-3">
+                    <label class="form-label">超标阈值（%）</label>
+                    <input type="number" name="threshold" class="form-control" 
+                           value="{{ threshold }}" min="10" max="100">
+                </div>
+                
+                <div class="col-md-1 align-self-end">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if high_consumption %}
+<!-- 添加分析范围信息 -->
+<div class="row mb-3">
+    <div class="col-md-12">
+        <div class="alert alert-info">
+            <h6>分析范围：{% if selected_factories and selected_factories[0] %}
+                {% for factory in factories %}
+                    {% if factory.厂区编号 == selected_factories[0] %}
+                        {{ factory.厂区名称 }}
+                    {% endif %}
+                {% endfor %}
+                {% else %}全部厂区{% endif %}</h6>
+            <p class="mb-0">能源类型：{{ energy_type }} | 超标阈值：{{ threshold }}%</p>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">高耗能厂区对比</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="highConsumptionChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">分析结果</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>厂区</th>
+                                <th>平均能耗</th>
+                                <th>总体平均</th>
+                                <th>超标比例</th>
+                                <th>状态</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in high_consumption %}
+                            <tr>
+                                <td>{{ item.factory }}</td>
+                                <td>{{ "%.0f"|format(item.avg_energy) }}</td>
+                                <td>{{ "%.0f"|format(item.overall_avg) }}</td>
+                                <td>{{ item.ratio }}%</td>
+                                <td>
+                                    {% if item.status == '超标' %}
+                                    <span class="badge bg-danger">超标</span>
+                                    {% elif item.status == '预警' %}
+                                    <span class="badge bg-warning">预警</span>
+                                    {% else %}
+                                    <span class="badge bg-success">正常</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if high_consumption %}
+<div class="card mt-4">
+    <div class="card-header">
+        <h5 class="mb-0">整改建议</h5>
+    </div>
+    <div class="card-body">
+        {% for item in high_consumption %}
+            {% if item.status in ['超标', '预警'] %}
+            <div class="alert alert-warning">
+                <h6>{{ item.factory }} (超标{{ item.ratio }}%)</h6>
+                <p class="mb-2">建议措施：</p>
+                <ul>
+                    <li>检查设备运行效率</li>
+                    <li>优化生产排程</li>
+                    <li>加强用能监测</li>
+                    <li>制定节能改造方案</li>
+                </ul>
+                <button class="btn btn-sm btn-outline-primary">生成整改通知</button>
+            </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endif %}
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    {% if analysis_type != 'high_consumption' and analysis_data %}
+    // 峰谷分析图表
+    const peakCtx = document.getElementById('peakValleyChart').getContext('2d');
+    if (peakCtx) {
+        new Chart(peakCtx, {
+            type: 'bar',
+            data: {
+                labels: {{ analysis_data.labels|tojson|safe }},
+                datasets: [{
+                    label: '能耗 (kWh)',
+                    data: {{ analysis_data.values_list|tojson|safe }},
+                    backgroundColor: ['#e74a3b', '#f39c12', '#3498db', '#2ecc71']
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: '能耗 (kWh)'
+                        }
+                    }
+                }
+            }
+        });
+    }
+    {% endif %}
+    
+    {% if analysis_type == 'high_consumption' and high_consumption and high_consumption|length > 0 %}
+    // 高耗能分析图表
+    const highCtx = document.getElementById('highConsumptionChart').getContext('2d');
+    
+    const factories = {{ high_consumption|map(attribute='factory')|list|tojson|safe }};
+    const energies = {{ high_consumption|map(attribute='avg_energy')|list|tojson|safe }};
+    const overallAvg = {{ high_consumption[0].overall_avg|default(0)|tojson|safe }};
+    
+    if (highCtx && factories.length > 0) {
+        new Chart(highCtx, {
+            type: 'bar',
+            data: {
+                labels: factories,
+                datasets: [{
+                    label: '平均能耗',
+                    data: energies,
+                    backgroundColor: energies.map(e => e > overallAvg * 1.3 ? '#e74a3b' : 
+                                                   e > overallAvg * 1.1 ? '#f39c12' : '#2ecc71')
+                }, {
+                    label: '总体平均',
+                    data: Array(factories.length).fill(overallAvg),
+                    type: 'line',
+                    borderColor: '#3498db',
+                    borderWidth: 2,
+                    fill: false
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: '能耗 (kWh)'
+                        }
+                    }
+                }
+            }
+        });
+    }
+    {% endif %}
+    
+    // 添加自动提交功能（可选）
+    const energyTypeSelect = document.getElementById('energyTypeSelect');
+    const factorySelect = document.getElementById('factorySelect');
+    
+    if (energyTypeSelect) {
+        energyTypeSelect.addEventListener('change', function() {
+            // 如果是峰谷分析，自动提交表单
+            const urlParams = new URLSearchParams(window.location.search);
+            const analysisType = urlParams.get('type');
+            
+            if (analysisType === 'peak_valley' || !analysisType) {
+                this.form.submit();
+            }
+        });
+    }
+    
+    if (factorySelect) {
+        factorySelect.addEventListener('change', function() {
+            // 如果是峰谷分析，自动提交表单
+            const urlParams = new URLSearchParams(window.location.search);
+            const analysisType = urlParams.get('type');
+            
+            if (analysisType === 'peak_valley' || !analysisType) {
+                this.form.submit();
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,501 @@
+{% extends "base.html" %}
+
+{% block title %}数据审核 - 智慧能源管理系统{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">数据审核</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <button class="btn btn-sm btn-success" onclick="batchAudit('已复核')">
+                <i class="fas fa-check-circle"></i> 批量标记为已复核
+            </button>
+            <button class="btn btn-sm btn-warning" onclick="batchAudit('待复核')">
+                <i class="fas fa-redo"></i> 批量标记为待复核
+            </button>
+        </div>
+    </div>
+</div>
+
+{% if abnormal_data %}
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="card-title">总数据量</h6>
+                <h3 class="text-primary">{{ abnormal_data|length }}</h3>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="card-title">待复核</h6>
+                <h3 class="text-warning">{{ abnormal_data|selectattr('审核状态', 'equalto', '待复核')|list|length }}</h3>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="card-title">已复核</h6>
+                <h3 class="text-success">{{ abnormal_data|selectattr('审核状态', 'equalto', '已复核')|list|length }}</h3>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="card-title">低质量数据</h6>
+                <h3 class="text-danger">{{ abnormal_data|selectattr('数据质量', 'in', ['中', '差'])|list|length }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 数据质量分布图表 -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">数据质量分布</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <canvas id="qualityChart" height="200"></canvas>
+            </div>
+            <div class="col-md-6">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>数据质量</th>
+                            <th>数量</th>
+                            <th>百分比</th>
+                            <th>审核状态</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% set quality_counts = {'优': 0, '良': 0, '中': 0, '差': 0} %}
+                        {% for item in abnormal_data %}
+                            {% if item.数据质量 in ['优', '良', '中', '差'] %}
+                                {% set _ = quality_counts.update({item.数据质量: quality_counts[item.数据质量] + 1}) %}
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% for quality_type in ['优', '良', '中', '差'] %}
+                            {% set count = quality_counts[quality_type] %}
+                            {% if count > 0 %}
+                                <tr>
+                                    <td>
+                                        {% if quality_type == '优' %}
+                                        <span class="badge bg-success">优</span>
+                                        {% elif quality_type == '良' %}
+                                        <span class="badge bg-info">良</span>
+                                        {% elif quality_type == '中' %}
+                                        <span class="badge bg-warning">中</span>
+                                        {% else %}
+                                        <span class="badge bg-danger">差</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ count }}</td>
+                                    <td>{{ "%.1f"|format(count * 100 / abnormal_data|length) }}%</td>
+                                    <td>
+                                        {% set verified_count = abnormal_data|selectattr('数据质量', 'equalto', quality_type)|selectattr('审核状态', 'equalto', '已复核')|list|length %}
+                                        {{ verified_count }}/{{ count }}
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- 查询表单 -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" action="{{ url_for('energy_audit') }}">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">数据质量</label>
+                    <select name="quality" class="form-select" onchange="this.form.submit()">
+                        <option value="全部" {% if quality == '全部' %}selected{% endif %}>全部数据</option>
+                        <option value="中/差" {% if quality == '中/差' %}selected{% endif %}>中/差</option>
+                        <option value="优" {% if quality == '优' %}selected{% endif %}>优</option>
+                        <option value="良" {% if quality == '良' %}selected{% endif %}>良</option>
+                        <option value="中" {% if quality == '中' %}selected{% endif %}>中</option>
+                        <option value="差" {% if quality == '差' %}selected{% endif %}>差</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-3">
+                    <label class="form-label">审核状态</label>
+                    <select name="audit_status" class="form-select" onchange="this.form.submit()">
+                        <option value="全部" {% if audit_status == '全部' %}selected{% endif %}>全部状态</option>
+                        <option value="待复核" {% if audit_status == '待复核' %}selected{% endif %}>待复核</option>
+                        <option value="已复核" {% if audit_status == '已复核' %}selected{% endif %}>已复核</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-3">
+                    <label class="form-label">波动阈值（%）</label>
+                    <input type="number" name="fluctuation" class="form-control" 
+                           value="{{ fluctuation }}" min="10" max="50">
+                </div>
+                
+                <div class="col-md-3 align-self-end">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search"></i> 查询
+                    </button>
+                    <a href="{{ url_for('energy_audit') }}" class="btn btn-secondary">
+                        <i class="fas fa-redo"></i> 重置
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 数据表格 -->
+<div class="card">
+    <div class="card-body">
+        {% if abnormal_data %}
+        <div class="table-responsive">
+            <table class="table table-hover table-sm">
+                <thead class="table-light">
+                    <tr>
+                        <th width="40"><input type="checkbox" id="selectAll"></th>
+                        <th>数据编号</th>
+                        <th>设备编号</th>
+                        <th>采集时间</th>
+                        <th>能耗值</th>
+                        <th>单位</th>
+                        <th>数据质量</th>
+                        <th>审核状态</th>
+                        <th>审核时间</th>
+                        <th>审核人</th>
+                        <th>厂区</th>
+                        <th width="140">操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for data in abnormal_data %}
+                    <tr>
+                        <td>
+                            <input type="checkbox" class="data-check" value="{{ data.数据编号 }}">
+                        </td>
+                        <td>
+                            <small>{{ data.数据编号[:8] }}...</small>
+                        </td>
+                        <td>
+                            <small>{{ data.设备编号 }}</small>
+                        </td>
+                        <td>
+                            <small>{{ data.采集时间.strftime('%m-%d %H:%M') if data.采集时间 else 'N/A' }}</small>
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark">{{ "%.2f"|format(data.能耗值 or 0) }}</span>
+                        </td>
+                        <td>{{ data.单位 }}</td>
+                        <td>
+                            {% if data.数据质量 == '优' %}
+                            <span class="badge bg-success">优</span>
+                            {% elif data.数据质量 == '良' %}
+                            <span class="badge bg-info">良</span>
+                            {% elif data.数据质量 == '中' %}
+                            <span class="badge bg-warning">中</span>
+                            {% elif data.数据质量 == '差' %}
+                            <span class="badge bg-danger">差</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ data.数据质量 }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if data.审核状态 == '已复核' %}
+                            <span class="badge bg-success">已复核</span>
+                            {% else %}
+                            <span class="badge bg-warning">待复核</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <small>
+                                {% if data.审核时间 %}
+                                {{ data.审核时间.strftime('%m-%d %H:%M') }}
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </small>
+                        </td>
+                        <td>
+                            <small>{{ data.审核人姓名 or '-' }}</small>
+                        </td>
+                        <td>
+                            <small>{{ data.厂区名称 }}</small>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button type="button" class="btn btn-outline-primary btn-sm" 
+                                        onclick="showDetail('{{ data.数据编号 }}')"
+                                        title="查看详情">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                {% if data.审核状态 == '待复核' %}
+                                <button type="button" class="btn btn-outline-success btn-sm"
+                                        onclick="markAsVerified('{{ data.数据编号 }}')"
+                                        title="标记为已复核">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                                {% else %}
+                                <button type="button" class="btn btn-outline-warning btn-sm"
+                                        onclick="markAsPending('{{ data.数据编号 }}')"
+                                        title="重新审核">
+                                    <i class="fas fa-undo"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center text-muted py-5">
+            <i class="fas fa-database fa-3x mb-3"></i>
+            <p>没有找到匹配的数据</p>
+            <a href="{{ url_for('audit') }}" class="btn btn-primary">显示所有数据</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 详情模态框 -->
+<div class="modal fade" id="detailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">数据详情</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="detailContent">
+                    <!-- 详情内容将通过JS动态加载 -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                <button type="button" class="btn btn-primary" onclick="initiateFieldCheck()">
+                    发起现场核查
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 全选/全不选
+document.getElementById('selectAll').addEventListener('change', function() {
+    const checkboxes = document.querySelectorAll('.data-check');
+    checkboxes.forEach(cb => cb.checked = this.checked);
+});
+
+// 查看详情
+function showDetail(dataId) {
+    // 这里可以发起AJAX请求获取详细信息
+    const detailContent = `
+        <h6>数据ID: ${dataId}</h6>
+        <p>检测到数据波动异常，超出正常范围20%，建议进行现场核查。</p>
+        <div class="alert alert-warning">
+            <h6>异常分析：</h6>
+            <ul>
+                <li>数据波动超出阈值</li>
+                <li>可能原因：设备故障、数据采集异常</li>
+                <li>影响：能耗统计不准确</li>
+            </ul>
+        </div>
+        <h6>处理建议：</h6>
+        <ol>
+            <li>联系运维人员现场检查设备</li>
+            <li>验证数据采集器工作状态</li>
+            <li>如有必要，重新校准设备</li>
+        </ol>
+    `;
+    
+    document.getElementById('detailContent').innerHTML = detailContent;
+    new bootstrap.Modal(document.getElementById('detailModal')).show();
+}
+
+// 标记为已复核
+function markAsVerified(dataId) {
+    const remark = prompt('请输入复核备注（可选）：', '数据核实通过');
+    
+    fetch('/api/energy/audit/update_status', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            data_id: dataId,
+            status: '已复核',
+            remark: remark || '数据核实通过'
+        })
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            alert('数据已标记为已复核');
+            location.reload();
+        } else {
+            alert('操作失败：' + result.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('操作失败');
+    });
+}
+
+// 标记为待复核
+function markAsPending(dataId) {
+    if (confirm('确定要将此数据重新标记为待复核吗？')) {
+        const remark = prompt('请输入重审原因：', '需要重新核实');
+        
+        fetch('/api/energy/audit/update_status', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                data_id: dataId,
+                status: '待复核',
+                remark: remark || '需要重新核实'
+            })
+        })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            alert('数据已标记为待复核');
+            location.reload();
+        } else {
+            alert('操作失败：' + result.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('操作失败');
+    });
+    }
+}
+
+// 批量审核
+function batchAudit(status) {
+    const selected = Array.from(document.querySelectorAll('.data-check:checked'))
+                        .map(cb => cb.value);
+    
+    if (selected.length === 0) {
+        alert('请先选择要操作的数据');
+        return;
+    }
+    
+    const statusText = status === '已复核' ? '标记为已复核' : '标记为待复核';
+    if (confirm(`确定要将选中的 ${selected.length} 条数据${statusText}吗？`)) {
+        fetch('/api/energy/audit/batch_update', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                data_ids: selected,
+                status: status
+            })
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                alert(result.message);
+                location.reload();
+            } else {
+                alert('操作失败：' + result.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('操作失败');
+        });
+    }
+}
+
+// 数据质量图表
+document.addEventListener('DOMContentLoaded', function() {
+    const qualityChartCanvas = document.getElementById('qualityChart');
+    if (qualityChartCanvas) {
+        const ctx = qualityChartCanvas.getContext('2d');
+        
+        // 计算数据质量分布
+        const qualityCounts = {
+            '优': 0,
+            '良': 0,
+            '中': 0,
+            '差': 0
+        };
+        
+        // 遍历页面中的数据
+        const qualityElements = document.querySelectorAll('td span.badge');
+        qualityElements.forEach(element => {
+            const text = element.textContent.trim();
+            if (text in qualityCounts) {
+                qualityCounts[text]++;
+            }
+        });
+        
+        const labels = Object.keys(qualityCounts).filter(key => qualityCounts[key] > 0);
+        const data = labels.map(label => qualityCounts[label]);
+        const backgroundColors = labels.map(label => {
+            switch(label) {
+                case '优': return '#28a745';
+                case '良': return '#17a2b8';
+                case '中': return '#ffc107';
+                case '差': return '#dc3545';
+                default: return '#6c757d';
+            }
+        });
+        
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: data,
+                    backgroundColor: backgroundColors,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    }
+});
+
+// 发起现场核查
+function initiateFieldCheck() {
+    const reason = prompt('请输入核查说明：', '数据波动异常，需要现场核查设备状态和数据采集准确性。');
+    if (reason) {
+        alert('已成功发起现场核查');
+        bootstrap.Modal.getInstance(document.getElementById('detailModal')).hide();
+    }
+}
+</script>
+{% endblock %}

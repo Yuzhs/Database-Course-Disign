@@ -1,0 +1,971 @@
+{% extends "workorder/base.html" %}
+
+{% block title %}告警详情 - 智慧能源管理系统{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <nav aria-label="breadcrumb" class="mb-4">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('workorder_dashboard') }}">首页</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('workorder_alarms') }}">告警管理</a></li>
+                <li class="breadcrumb-item active">告警详情</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <!-- 告警基本信息 -->
+        <div class="card shadow mb-4">
+            <div class="card-header {% if alarm.告警等级 == '高' %}bg-danger text-white
+                                  {% elif alarm.告警等级 == '中' %}bg-warning text-dark
+                                  {% else %}bg-info text-white{% endif %}">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">告警详情</h5>
+                    <span class="badge bg-light text-dark">
+                        ID: {{ alarm.告警编号 }}
+                    </span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <th width="30%">告警类型：</th>
+                                <td>{{ alarm.告警类型 }}</td>
+                            </tr>
+                            <tr>
+                                <th>告警等级：</th>
+                                <td>
+                                    {% if alarm.告警等级 == '高' %}
+                                    <span class="badge bg-danger">高</span>
+                                    {% elif alarm.告警等级 == '中' %}
+                                    <span class="badge bg-warning text-dark">中</span>
+                                    {% else %}
+                                    <span class="badge bg-info">低</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>设备名称：</th>
+                                <td>{{ alarm.设备名称 or 'N/A' }}</td>
+                            </tr>
+                            <tr>
+                                <th>设备类型：</th>
+                                <td>{{ alarm.设备类型 or 'N/A' }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <th width="30%">发生时间：</th>
+                                <td>{{ alarm.发生时间.strftime('%Y-%m-%d %H:%M:%S') if alarm.发生时间 else 'N/A' }}</td>
+                            </tr>
+                            <tr>
+                                <th>处理状态：</th>
+                                <td>
+                                    {% if alarm.处理状态 == '待审核' %}
+                                    <span class="badge bg-secondary">待审核</span>
+                                    {% elif alarm.处理状态 == '未处理' %}
+                                    <span class="badge bg-warning text-dark">未处理</span>
+                                    {% elif alarm.处理状态 == '待决策' %}
+                                    <span class="badge bg-info">待决策</span>
+                                    {% elif alarm.处理状态 == '处理中' %}
+                                    <span class="badge bg-primary">处理中</span>
+                                    {% else %}
+                                    <span class="badge bg-success">已结案</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>触发阈值：</th>
+                                <td>{{ alarm.告警触发阈值 or 'N/A' }}</td>
+                            </tr>
+                            <tr>
+                                <th>厂区位置：</th>
+                                <td>{{ alarm.厂区位置 or 'N/A' }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- 修改这里：将警告框改为卡片 -->
+                <div class="mt-3">
+                    <h6>告警内容</h6>
+                    <div class="card border 
+                        {% if alarm.告警等级 == '高' %}border-danger
+                        {% elif alarm.告警等级 == '中' %}border-warning
+                        {% else %}border-info{% endif %}">
+                        <div class="card-body">
+                            <p class="card-text">{{ alarm.告警内容 }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <small class="text-muted">
+                            最后更新: {{ alarm.确认时间.strftime('%Y-%m-%d %H:%M') if alarm.确认时间 else '未确认' }}
+                        </small>
+                    </div>
+                    <div>
+                        {% if alarm.处理状态 == '待审核' %}
+                            <!-- 待审核的告警：显示标记误报、确认告警和查看设备数据按钮 -->
+                            <button class="btn btn-sm btn-danger mark-false-alarm" 
+                                    data-alarm-id="{{ alarm.告警ID }}">
+                                <i class="fas fa-times-circle me-2"></i>标记误报
+                            </button>
+                            <button class="btn btn-sm btn-success confirm-alarm"
+                                    data-alarm-id="{{ alarm.告警ID }}">
+                                <i class="fas fa-check-circle me-2"></i>确认告警
+                            </button>
+                            <button class="btn btn-sm btn-info view-device-data"
+                                    data-alarm-id="{{ alarm.告警ID }}"
+                                    data-device-id="{{ alarm.关联设备编号 }}"
+                                    data-alarm-time="{{ alarm.发生时间.strftime('%Y-%m-%d %H:%M:%S') if alarm.发生时间 else '' }}">
+                                <i class="fas fa-chart-line me-2"></i>查看设备数据
+                            </button>
+                            
+                        {% elif alarm.处理状态 == '未处理' %}
+                            <!-- 未处理的告警：只显示创建工单按钮 -->
+                            <button class="btn btn-sm btn-warning create-work-order"
+                                    data-alarm-id="{{ alarm.告警ID }}"
+                                    data-alarm-content="{{ alarm.告警内容 }}">
+                                <i class="fas fa-plus-circle me-2"></i>创建工单
+                            </button>
+                            
+                        {% elif alarm.处理状态 == '待决策' %}
+                            <!-- 待决策的告警：只能查看，无操作按钮 -->
+                            <span class="badge bg-warning">待决策</span>
+                            
+                        {% elif alarm.处理状态 == '处理中' %}
+                            <!-- 处理中的告警：显示状态 -->
+                            <span class="badge bg-primary">处理中</span>
+                            
+                        {% elif alarm.处理状态 == '已结案' %}
+                            <!-- 已结案的告警：显示状态 -->
+                            <span class="badge bg-success">已结案</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 相关工单部分保持不变 -->
+        {% if work_orders %}
+        <div class="card shadow mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">相关工单</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>工单编号</th>
+                                <th>运维人员</th>
+                                <th>派单时间</th>
+                                <th>完成时间</th>
+                                <th>复查状态</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in work_orders %}
+                            <tr>
+                                <td>{{ order.工单编号 }}</td>
+                                <td>{{ order.运维人员姓名 or 'N/A' }}</td>
+                                <td>{{ order.派单时间.strftime('%m-%d %H:%M') if order.派单时间 else 'N/A' }}</td>
+                                <td>{{ order.处理完成时间.strftime('%m-%d %H:%M') if order.处理完成时间 else '进行中' }}</td>
+                                <td>
+                                    {% if order.复查状态 == '通过' %}
+                                    <span class="badge bg-success">通过</span>
+                                    {% elif order.复查状态 == '未通过' %}
+                                    <span class="badge bg-danger">未通过</span>
+                                    {% elif order.处理完成时间 %}
+                                    <span class="badge bg-info">待复查</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if order.处理完成时间 and not order.复查状态 %}
+                                    <a href="{{ url_for('workorder_review_work_order', work_order_id=order.工单ID) }}"
+                                       class="btn btn-sm btn-outline-warning">
+                                        <i class="fas fa-user-check"></i>复查
+                                    </a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="col-md-4">
+        <!-- 设备信息保持不变 -->
+        <div class="card shadow mb-4">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0">设备信息</h5>
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-5">设备状态：</dt>
+                    <dd class="col-sm-7">
+                        {% if alarm.设备状态 == '正常' %}
+                        <span class="badge bg-success">正常</span>
+                        {% elif alarm.设备状态 == '故障' %}
+                        <span class="badge bg-danger">故障</span>
+                        {% elif alarm.设备状态 == '维护中' %}
+                        <span class="badge bg-warning">维护中</span>
+                        {% else %}
+                        <span class="badge bg-secondary">{{ alarm.设备状态 or '未知' }}</span>
+                        {% endif %}
+                    </dd>
+                    
+                    <dt class="col-sm-5">设备大类：</dt>
+                    <dd class="col-sm-7">{{ alarm.设备大类 or 'N/A' }}</dd>
+                    
+                    <dt class="col-sm-5">安装位置：</dt>
+                    <dd class="col-sm-7">{{ alarm.安装位置描述 or 'N/A' }}</dd>
+                    
+                    <dt class="col-sm-5">厂区名称：</dt>
+                    <dd class="col-sm-7">{{ alarm.厂区名称 or 'N/A' }}</dd>
+                </dl>
+            </div>
+        </div>
+        
+        <!-- 历史告警保持不变 -->
+        {% if history_alarms %}
+        <div class="card shadow">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">设备历史告警</h5>
+            </div>
+            <div class="card-body" style="max-height: 300px; overflow-y: auto;">
+                {% for history in history_alarms %}
+                <div class="border-bottom py-2">
+                    <div class="d-flex justify-content-between">
+                        <small>{{ history.告警类型 }}</small>
+                        <small class="text-muted">{{ history.发生时间.strftime('%m-%d %H:%M') if history.发生时间 else '' }}</small>
+                    </div>
+                    <div class="mt-1">
+                        {% if history.告警等级 == '高' %}
+                        <span class="badge bg-danger badge-sm">高</span>
+                        {% elif history.告警等级 == '中' %}
+                        <span class="badge bg-warning badge-sm">中</span>
+                        {% else %}
+                        <span class="badge bg-info badge-sm">低</span>
+                        {% endif %}
+                        
+                        {% if history.处理状态 == '待审核' %}
+                        <span class="badge bg-secondary badge-sm">待审核</span>
+                        {% elif history.处理状态 == '未处理' %}
+                        <span class="badge bg-warning badge-sm">未处理</span>
+                        {% elif history.处理状态 == '待决策' %}
+                        <span class="badge bg-info badge-sm">待决策</span>
+                        {% elif history.处理状态 == '处理中' %}
+                        <span class="badge bg-primary badge-sm">处理中</span>
+                        {% else %}
+                        <span class="badge bg-success badge-sm">已结案</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="card-footer text-center">
+                <small class="text-muted">显示最近 {{ history_alarms|length }} 条记录</small>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 模态框保持不变 -->
+<div class="modal fade" id="createWorkOrderModal" tabindex="-1">
+    <!-- 内容不变 -->
+</div>
+
+<div class="modal fade" id="markFalseAlarmModal" tabindex="-1">
+    <!-- 内容不变 -->
+</div>
+
+<!-- 设备数据详情模态框 -->
+<div class="modal fade" id="deviceDataModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-chart-line me-2"></i>
+                    <span id="modalDeviceName">设备数据详情</span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- 加载状态 -->
+                <div id="loadingData" class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">加载中...</span>
+                    </div>
+                    <p class="mt-3">正在加载设备数据...</p>
+                </div>
+                
+                <!-- 设备基本信息 -->
+                <div id="deviceInfoSection" style="display: none;">
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">设备基本信息</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row" id="deviceBasicInfo">
+                                <!-- 动态填充设备信息 -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 告警时间点数据 -->
+                <div id="alarmTimeDataSection" style="display: none;">
+                    <div class="card mb-3 border-warning">
+                        <div class="card-header bg-warning text-dark">
+                            <h6 class="mb-0">告警发生时刻数据</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                告警发生时间: <strong id="alarmTimeDisplay"></strong>
+                                （显示最接近告警时间的监测数据）
+                            </div>
+                            <div id="alarmTimeData">
+                                <!-- 动态填充告警时间点数据 -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 监测数据表格 -->
+                <div id="monitoringDataSection" style="display: none;">
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0">监测数据详情</h6>
+                                <div>
+                                    <span class="badge bg-info me-2" id="dataCount">0 条记录</span>
+                                    <span class="badge bg-secondary" id="dataType">未知类型</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-light border">
+                                <i class="fas fa-clock me-2"></i>
+                                数据时间范围：告警发生时间前后30分钟
+                            </div>
+                            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                                <table class="table table-hover table-sm" id="monitoringDataTable">
+                                    <thead>
+                                        <!-- 动态生成表头 -->
+                                    </thead>
+                                    <tbody>
+                                        <!-- 动态生成表格内容 -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 无数据提示 -->
+                <div id="noDataSection" style="display: none;">
+                    <div class="text-center py-5">
+                        <i class="fas fa-database fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">暂无监测数据</h5>
+                        <p class="text-muted">该设备在告警发生时间前后30分钟内没有监测数据记录</p>
+                        <div class="alert alert-light border mt-3">
+                            <p><strong>可能的原因：</strong></p>
+                            <ul class="text-start">
+                                <li>设备监测数据表不存在或为空</li>
+                                <li>该时间段内没有采集到数据</li>
+                                <li>设备编号与监测数据表中的编号不匹配</li>
+                                <li>数据采集系统在此期间出现故障</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 错误信息 -->
+                <div id="errorSection" style="display: none;">
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <span id="errorMessage"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                <button type="button" class="btn btn-primary" id="exportDataBtn" style="display: none;">
+                    <i class="fas fa-download me-2"></i>导出数据
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+
+// 显示设备数据按钮点击事件
+$(document).on('click', '.view-device-data', function() {
+    const alarmId = $(this).data('alarm-id');
+    const deviceId = $(this).data('device-id');
+    const alarmTime = $(this).data('alarm-time');
+    
+    $('#deviceDataModal').modal('show');
+    
+    // 重置模态框内容
+    $('#loadingData').show();
+    $('#deviceInfoSection').hide();
+    $('#alarmTimeDataSection').hide();
+    $('#monitoringDataSection').hide();
+    $('#noDataSection').hide();
+    $('#errorSection').hide();
+    $('#exportDataBtn').hide();
+    
+    // 显示告警时间
+    $('#alarmTimeDisplay').text(alarmTime);
+    
+    // 获取设备数据
+    $.ajax({
+        url: '/api/get_device_data/' + alarmId,
+        method: 'GET',
+        success: function(response) {
+            $('#loadingData').hide();
+            
+            if (response.success) {
+                const data = response.data;
+                
+                // 1. 显示设备基本信息（包括当前状态）
+                displayDeviceInfo(data.device_info, data.alarm_info);
+                
+                // 2. 显示告警时间点数据
+                if (data.alarm_time_data) {
+                    displayAlarmTimeData(data.alarm_time_data, data.data_type);
+                }
+                
+                // 3. 显示监测数据
+                if (data.monitoring_data && data.monitoring_data.length > 0) {
+                    displayMonitoringData(data.monitoring_data, data.data_type);
+                } else {
+                    $('#noDataSection').show();
+                }
+                
+                // 4. 显示数据统计信息（如果有）
+                if (data.statistics) {
+                    // 可以在这里显示统计数据
+                    console.log('统计数据:', data.statistics);
+                }
+                
+            } else {
+                $('#errorMessage').text(response.message || '获取数据失败');
+                $('#errorSection').show();
+            }
+        },
+        error: function(xhr, status, error) {
+            $('#loadingData').hide();
+            $('#errorMessage').text('请求失败：' + error);
+            $('#errorSection').show();
+        }
+    });
+});
+
+// 显示设备基本信息（包括当前状态）
+function displayDeviceInfo(deviceInfo, alarmInfo) {
+    if (!deviceInfo) return;
+    
+    const html = `
+        <div class="col-md-4">
+            <p><strong>设备编号：</strong>${deviceInfo.设备编号 || 'N/A'}</p>
+            <p><strong>设备名称：</strong>${deviceInfo.设备名称 || 'N/A'}</p>
+        </div>
+        <div class="col-md-4">
+            <p><strong>设备类型：</strong>${deviceInfo.设备类型 || 'N/A'}</p>
+            <p><strong>设备大类：</strong>${deviceInfo.设备大类 || 'N/A'}</p>
+        </div>
+        <div class="col-md-4">
+            <p><strong>当前状态：</strong>
+                <span class="badge ${getStatusBadgeClass(deviceInfo.运行状态)}">
+                    ${deviceInfo.运行状态 || '未知'}
+                </span>
+            </p>
+            <p><strong>安装位置：</strong>${deviceInfo.安装位置描述 || 'N/A'}</p>
+        </div>
+        <div class="col-12 mt-2">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                数据范围：告警发生时间（${alarmInfo.发生时间}）前后30分钟
+            </div>
+        </div>
+    `;
+    
+    $('#deviceBasicInfo').html(html);
+    $('#modalDeviceName').text(`${deviceInfo.设备名称 || '设备'} - 监测数据详情`);
+    $('#deviceInfoSection').show();
+}
+
+// 显示告警时间点数据
+function displayAlarmTimeData(data, dataType) {
+    let html = '';
+    
+    if (dataType === '变压器监测数据') {
+        html = `
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="card ${data.负载率 > 80 ? 'border-danger' : 'border-success'}">
+                        <div class="card-body text-center">
+                            <h6>负载率</h6>
+                            <h4>${data.负载率 || 0}%</h4>
+                            <small>${data.负载率 > 80 ? '高负载' : '正常'}</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card ${data.绕组温度 > 100 ? 'border-danger' : 'border-success'}">
+                        <div class="card-body text-center">
+                            <h6>绕组温度</h6>
+                            <h4>${data.绕组温度 || 0}℃</h4>
+                            <small>${data.绕组温度 > 100 ? '温度过高' : '正常'}</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card ${data.铁芯温度 > 100 ? 'border-warning' : 'border-success'}">
+                        <div class="card-body text-center">
+                            <h6>铁芯温度</h6>
+                            <h4>${data.铁芯温度 || 0}℃</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h6>环境温度/湿度</h6>
+                            <h6>${data.环境温度 || 0}℃ / ${data.环境湿度 || 0}%</h6>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-3 text-center">
+                <span class="badge ${getStatusBadgeClass(data.运行状态)}">
+                    当时运行状态：${data.运行状态 || '未知'}
+                </span>
+            </div>
+        `;
+    } else if (dataType === '回路监测数据') {
+        html = `
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="card ${data.电压 > 250 ? 'border-danger' : 'border-success'}">
+                        <div class="card-body text-center">
+                            <h6>电压</h6>
+                            <h4>${data.电压 || 0}V</h4>
+                            ${data.电压异常标记 ? '<small class="text-danger">电压异常</small>' : ''}
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card ${data.电流 > 100 ? 'border-warning' : 'border-success'}">
+                        <div class="card-body text-center">
+                            <h6>电流</h6>
+                            <h4>${data.电流 || 0}A</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h6>功率</h6>
+                            <h6>有功：${data.有功功率 || 0}kW</h6>
+                            <small>无功：${data.无功功率 || 0}kVar</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card ${data.电缆头温度 > 80 ? 'border-danger' : 'border-success'}">
+                        <div class="card-body text-center">
+                            <h6>温度</h6>
+                            <h6>电缆头：${data.电缆头温度 || 0}℃</h6>
+                            <small>电容器：${data.电容器温度 || 0}℃</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row mt-2">
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h6>功率因数</h6>
+                            <h4>${data.功率因数 || 0}</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h6>开关状态</h6>
+                            <h4>
+                                <span class="badge ${data.开关状态 === '合闸' ? 'bg-success' : 'bg-secondary'}">
+                                    ${data.开关状态 || '未知'}
+                                </span>
+                            </h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h6>异常标记</h6>
+                            <div>
+                                ${data.电压异常标记 ? '<span class="badge bg-danger me-1">电压异常</span>' : ''}
+                                ${data.温度异常标记 ? '<span class="badge bg-danger">温度异常</span>' : ''}
+                                ${!data.电压异常标记 && !data.温度异常标记 ? '<span class="badge bg-success">正常</span>' : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    } else if (dataType === '光伏发电数据') {
+        html = `
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h6>发电量</h6>
+                            <h4>${data.发电量 || 0}kWh</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card ${data.逆变器效率 < 85 ? 'border-warning' : 'border-success'}">
+                        <div class="card-body text-center">
+                            <h6>逆变器效率</h6>
+                            <h4>${data.逆变器效率 || 0}%</h4>
+                            <small>${data.逆变器效率 < 85 ? '效率较低' : '正常'}</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h6>组串参数</h6>
+                            <h6>电压：${data.组串电压 || 0}V</h6>
+                            <small>电流：${data.组串电流 || 0}A</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row mt-2">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h6>电量分配</h6>
+                            <div>上网：${data.上网电量 || 0}kWh</div>
+                            <div>自用：${data.自用电量 || 0}kWh</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h6>数据质量</h6>
+                            <h4>
+                                <span class="badge ${getDataQualityBadgeClass(data.数据质量)}">
+                                    ${data.数据质量 || '未知'}
+                                </span>
+                            </h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    } else if (dataType === '能耗监测数据') {
+        html = `
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h6>能耗值</h6>
+                            <h4>${data.能耗值 || 0}</h4>
+                            <small>单位：${data.单位 || 'N/A'}</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h6>数据质量</h6>
+                            <h4>
+                                <span class="badge ${getDataQualityBadgeClass(data.数据质量)}">
+                                    ${data.数据质量 || '未知'}
+                                </span>
+                            </h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    if (html) {
+        $('#alarmTimeData').html(html);
+        $('#alarmTimeDataSection').show();
+    }
+}
+
+// 辅助函数：获取状态徽章样式
+function getStatusBadgeClass(status) {
+    if (!status) return 'bg-secondary';
+    
+    switch(status) {
+        case '正常':
+            return 'bg-success';
+        case '故障':
+            return 'bg-danger';
+        case '离线':
+            return 'bg-secondary';
+        case '维护中':
+            return 'bg-warning';
+        case '异常':
+            return 'bg-danger';
+        case '校准中':
+            return 'bg-info';
+        case '停用':
+            return 'bg-dark';
+        default:
+            return 'bg-secondary';
+    }
+}
+
+// 辅助函数：获取数据质量徽章样式
+function getDataQualityBadgeClass(quality) {
+    if (!quality) return 'bg-secondary';
+    
+    switch(quality) {
+        case '优':
+            return 'bg-success';
+        case '良':
+            return 'bg-primary';
+        case '中':
+            return 'bg-warning';
+        case '差':
+            return 'bg-danger';
+        default:
+            return 'bg-secondary';
+    }
+}
+
+// 导出数据功能
+$('#exportDataBtn').click(function() {
+    // 简单的导出为CSV格式
+    const table = $('#monitoringDataTable');
+    let csv = [];
+    
+    // 获取表头
+    const headers = [];
+    table.find('thead th').each(function() {
+        headers.push($(this).text());
+    });
+    csv.push(headers.join(','));
+    
+    // 获取数据行
+    table.find('tbody tr').each(function() {
+        const row = [];
+        $(this).find('td').each(function() {
+            // 移除HTML标签，只获取文本内容
+            let text = $(this).text().trim();
+            // 处理可能包含逗号的情况
+            if (text.includes(',')) {
+                text = `"${text}"`;
+            }
+            row.push(text);
+        });
+        csv.push(row.join(','));
+    });
+    
+    // 创建下载链接
+    const csvContent = csv.join('\n');
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `设备监测数据_${new Date().toISOString().slice(0,10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+});
+
+// 这里不需要覆盖自动关闭功能，因为我们没有使用alert类显示告警内容
+$(document).ready(function() {
+    // 标记误报
+    $('.mark-false-alarm').click(function() {
+        const alarmId = $(this).data('alarm-id');
+        
+        if (confirm('确定要将此告警标记为误报吗？')) {
+            $.ajax({
+                url: '/api/mark_false_alarm',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    alarm_id: alarmId,
+                    reason: '手动标记为误报'
+                }),
+                success: function(response) {
+                    if (response.success) {
+                        alert('已标记为误报');
+                        location.reload();
+                    } else {
+                        alert('操作失败：' + response.message);
+                    }
+                }
+            });
+        }
+    });
+    
+    // 确认告警
+    $('.confirm-alarm').click(function() {
+        const alarmId = $(this).data('alarm-id');
+        
+        if (confirm('确认要审核通过这条告警吗？')) {
+            $.ajax({
+                url: '/api/confirm_alarm',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    alarm_id: alarmId
+                }),
+                success: function(response) {
+                    if (response.success) {
+                        alert(response.message);
+                        location.reload();
+                    } else {
+                        alert('操作失败：' + response.message);
+                    }
+                }
+            });
+        }
+    });
+    
+    // 创建工单
+    $('.create-work-order').click(function() {
+        window.location.href = "{{ url_for('workorder_alarms') }}";
+    });
+});
+
+// 显示监测数据表格
+function displayMonitoringData(dataList, dataType) {
+    if (!dataList || dataList.length === 0) {
+        $('#monitoringDataSection').hide();
+        return;
+    }
+    
+    // 更新数据类型显示
+    $('#dataType').text(dataType);
+    
+    // 获取表头（排除一些技术性字段）
+    const sample = dataList[0];
+    const excludeFields = ['设备编号', '变压器编号', '回路编号'];
+    const headers = Object.keys(sample).filter(key => !excludeFields.includes(key));
+    
+    // 生成表头HTML
+    let theadHtml = '<tr>';
+    headers.forEach(header => {
+        theadHtml += `<th>${header}</th>`;
+    });
+    theadHtml += '</tr>';
+    
+    $('#monitoringDataTable thead').html(theadHtml);
+    
+    // 生成表格内容HTML
+    let tbodyHtml = '';
+    dataList.forEach(data => {
+        tbodyHtml += '<tr>';
+        headers.forEach(header => {
+            let value = data[header];
+            
+            // 格式化时间
+            if (header.includes('时间') && value) {
+                try {
+                    const date = new Date(value);
+                    value = date.toLocaleString('zh-CN', {
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit'
+                    });
+                } catch (e) {
+                    // 保持原值
+                }
+            }
+            
+            // 根据数据值添加样式
+            let cellClass = '';
+            let cellContent = value || '';
+            
+            if (header === '运行状态') {
+                cellClass = getStatusBadgeClass(value);
+                cellContent = `<span class="badge ${cellClass}">${value || '未知'}</span>`;
+            } else if (header === '数据质量') {
+                cellClass = getDataQualityBadgeClass(value);
+                cellContent = `<span class="badge ${cellClass}">${value || '未知'}</span>`;
+            } else if (header === '开关状态') {
+                cellClass = value === '合闸' ? 'bg-success' : 'bg-secondary';
+                cellContent = `<span class="badge ${cellClass}">${value || '未知'}</span>`;
+            } else if (header === '电压异常标记' || header === '温度异常标记') {
+                if (value === true || value === 1 || value === '1') {
+                    cellClass = 'bg-danger';
+                    cellContent = '<span class="badge bg-danger">异常</span>';
+                } else {
+                    cellClass = 'bg-success';
+                    cellContent = '<span class="badge bg-success">正常</span>';
+                }
+            } else if (typeof value === 'number') {
+                // 数字类型的值，添加特殊样式
+                if ((header.includes('温度') || header.includes('温')) && value > 80) {
+                    cellClass = 'text-danger fw-bold';
+                } else if (header.includes('负载率') && value > 80) {
+                    cellClass = 'text-warning fw-bold';
+                } else if (header.includes('电压') && value > 250) {
+                    cellClass = 'text-danger fw-bold';
+                } else if (header.includes('电流') && value > 100) {
+                    cellClass = 'text-warning fw-bold';
+                } else if (header.includes('效率') && value < 85) {
+                    cellClass = 'text-warning fw-bold';
+                }
+                
+                if (cellClass) {
+                    cellContent = `<span class="${cellClass}">${value}</span>`;
+                }
+            }
+            
+            tbodyHtml += `<td>${cellContent}</td>`;
+        });
+        tbodyHtml += '</tr>';
+    });
+    
+    $('#monitoringDataTable tbody').html(tbodyHtml);
+    $('#dataCount').text(`${dataList.length} 条记录`);
+    $('#monitoringDataSection').show();
+    $('#exportDataBtn').show();
+}
+
+</script>
+{% endblock %}

@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>报告列表 - 智慧能源管理</title>
+<!--    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">-->
+    <style>
+        .reports-list-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .reports-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .reports-list {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .no-reports {
+            text-align: center;
+            padding: 50px;
+            color: #666;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            border: 2px dashed #dee2e6;
+        }
+
+        .report-item {
+            padding: 20px;
+            margin-bottom: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+            transition: all 0.3s;
+        }
+
+        .report-item:hover {
+            background-color: #e9ecef;
+            transform: translateX(5px);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .report-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .report-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .report-meta {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .report-id {
+            font-family: monospace;
+            background-color: #e9ecef;
+            padding: 2px 8px;
+            border-radius: 3px;
+            color: #495057;
+        }
+
+        .btn-view {
+            padding: 8px 16px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            text-decoration: none;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .btn-view:hover {
+            background-color: #0056b3;
+        }
+
+        .period-badge {
+            background-color: #28a745;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+
+        .monthly-badge {
+            background-color: #007bff;
+        }
+
+        .quarterly-badge {
+            background-color: #17a2b8;
+        }
+    </style>
+</head>
+<body>
+    <div class="reports-list-container">
+        <!-- 顶部导航栏 -->
+        <div class="header">
+            <div class="header-left">
+                <h1>{{ report_type_name }}列表</h1>
+                <p class="welcome">欢迎您，{{ user.真实姓名 }}（{{ user.用户角色 }}）</p>
+            </div>
+            <div class="header-right">
+                <div class="current-time" id="current-time"></div>
+                <a href="{{ url_for('management_dashboard') }}" class="btn-logout">返回大屏</a>
+                <a href="{{ url_for('logout') }}" class="btn-logout">退出登录</a>
+            </div>
+        </div>
+
+        {% if error %}
+        <div class="error-message">{{ error }}</div>
+        {% endif %}
+
+        <div class="reports-header">
+            <h2>共有 {{ reports|length }} 份{{ report_type_name }}</h2>
+            <div>
+                <a href="{% if report_type == 'monthly' %}{{ url_for('management_quarterly_reports') }}{% else %}{{ url_for('management_monthly_reports') }}{% endif %}"
+                   class="btn-logout">
+                    {% if report_type == 'monthly' %}查看季度报告{% else %}查看月度报告{% endif %}
+                </a>
+            </div>
+        </div>
+
+        <div class="reports-list">
+            {% if reports %}
+                {% for report in reports %}
+                <div class="report-item">
+                    <div class="report-item-header">
+                        <div>
+                            <span class="report-title">
+                                {% if report_type == 'monthly' %}
+                                月度报告 ({{ report.年月 }})
+                                {% else %}
+                                季度报告 ({{ report.季度 }})
+                                {% endif %}
+                            </span>
+                            <span class="period-badge {% if report_type == 'monthly' %}monthly-badge{% else %}quarterly-badge{% endif %}">
+                                {% if report_type == 'monthly' %}月度{% else %}季度{% endif %}
+                            </span>
+                        </div>
+                        <span class="report-id">报告ID: {{ report.报告ID }}</span>
+                    </div>
+
+                    <div class="report-meta">
+                        生成时间: {{ report.生成时间 }} |
+                        报告类型: {% if report.报告类型 == 1 %}月度报告{% else %}季度报告{% endif %} |
+                        生成人ID: {{ report.生成人ID }}
+                    </div>
+
+                    <div style="margin-top: 15px; text-align: right;">
+                        <a href="{{ url_for('management_report_detail', report_id=report.报告ID) }}" class="btn-view">
+                            📋 查看详情与评估
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="no-reports">
+                    <h3>暂无{{ report_type_name }}</h3>
+                    <p>当前没有找到任何{{ report_type_name }}，请联系系统管理员。</p>
+                    <a href="{{ url_for('management_dashboard') }}" class="btn-view" style="margin-top: 20px;">返回大屏</a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        // 更新时间显示
+        function updateTime() {
+            const now = new Date();
+            const timeStr = now.toLocaleString('zh-CN');
+            document.getElementById('current-time').textContent = timeStr;
+        }
+
+        // 页面加载完成后执行
+        window.onload = function() {
+            updateTime();
+            setInterval(updateTime, 1000);
+        };
+    </script>
+</body>
+</html>

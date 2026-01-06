@@ -1,0 +1,321 @@
+{% extends "base.html" %}
+
+{% block title %}能耗报表 - 智慧能源管理系统{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">能耗报表</h1>
+</div>
+
+<!-- 查询表单 -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" action="{{ url_for('energy_report') }}">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">厂区</label>
+                    <select name="factory_id" class="form-select">
+                        <option value="">全部厂区</option>
+                        {% for factory in factories %}
+                        <option value="{{ factory.厂区编号 }}" 
+                            {% if factory_id == factory.厂区编号 %}selected{% endif %}>
+                            {{ factory.厂区名称 }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-3">
+                    <label class="form-label">能源类型</label>
+                    <select name="energy_type" class="form-select">
+                        <option value="全部" {% if energy_type == '全部' %}selected{% endif %}>全部类型</option>
+                        {% for type in energy_types %}
+                        <option value="{{ type }}" 
+                            {% if energy_type == type %}selected{% endif %}>
+                            {{ type }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-3">
+                    <label class="form-label">开始日期</label>
+                    <input type="date" name="start_date" class="form-control" 
+                           value="{{ start_date }}">
+                </div>
+                
+                <div class="col-md-3">
+                    <label class="form-label">结束日期</label>
+                    <input type="date" name="end_date" class="form-control" 
+                           value="{{ end_date }}">
+                </div>
+            </div>
+            
+            <div class="row mt-3">
+                <div class="col-md-12">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search"></i> 查询
+                    </button>
+                    <a href="{{ url_for('energy_report') }}" class="btn btn-secondary">
+                        <i class="fas fa-redo"></i> 重置
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 各能源类型统计卡片 -->
+<div class="row mb-4">
+    {% for energy_key, info in energy_types_info.items() %}
+    <div class="col-md-3 mb-3">
+        <div class="card text-white bg-{{ info.color }}">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">{{ energy_key }}能耗</h6>
+                        <h3 class="card-text">
+                            {% if total_energy_by_type.get(energy_key) %}
+                                {{ "%.0f"|format(total_energy_by_type[energy_key]) }} {{ info.unit }}
+                            {% else %}
+                                0 {{ info.unit }}
+                            {% endif %}
+                        </h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas {{ info.icon }} fa-2x"></i>
+                    </div>
+                </div>
+                <small class="card-text opacity-75">
+                    {% if total_energy_all > 0 %}
+                        占比: {{ "%.1f"|format((total_energy_by_type.get(energy_key, 0) / total_energy_all) * 100) }}%
+                    {% else %}
+                        暂无数据
+                    {% endif %}
+                </small>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- 各能源类型详细数据表格 -->
+{% for energy_key, report_data in energy_reports.items() %}
+<div class="card mb-4">
+    <div class="card-header bg-{{ energy_types_info[energy_key].color }} text-white">
+        <h5 class="mb-0">
+            <i class="fas {{ energy_types_info[energy_key].icon }}"></i>
+            {{ energy_key }}能耗详细数据
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover table-sm">
+                <thead>
+                    <tr>
+                        <th>记录编号</th>
+                        <th>厂区</th>
+                        <th>统计日期</th>
+                        <th>尖峰能耗</th>
+                        <th>高峰能耗</th>
+                        <th>平段能耗</th>
+                        <th>低谷能耗</th>
+                        <th>总能耗</th>
+                        <th>电价(元/{{ energy_types_info[energy_key].unit }})</th>
+                        <th>能耗成本(元)</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in report_data %}
+                    <tr>
+                        <td>
+                            <small>{{ row.记录编号[:8] }}...</small>
+                        </td>
+                        <td>{{ row.厂区名称 or 'N/A' }}</td>
+                        <td>
+                            {% if row.统计日期 %}
+                                {{ row.统计日期.strftime('%Y-%m-%d') }}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </td>
+                        <td>{{ "%.2f"|format(row.尖峰时段能耗 or 0) }}</td>
+                        <td>{{ "%.2f"|format(row.高峰时段能耗 or 0) }}</td>
+                        <td>{{ "%.2f"|format(row.平段能耗 or 0) }}</td>
+                        <td>{{ "%.2f"|format(row.低谷时段能耗 or 0) }}</td>
+                        <td>
+                            <strong>{{ "%.2f"|format(row.总能耗 or 0) }}</strong>
+                        </td>
+                        <td>{{ "%.4f"|format(row.峰谷电价 or 0) }}</td>
+                        <td>
+                            <span class="badge bg-light text-dark">
+                                ¥{{ "%.2f"|format(row.能耗成本 or 0) }}
+                            </span>
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-{{ energy_types_info[energy_key].color }}" 
+                                    onclick="showEnergyDetail('{{ energy_key }}', '{{ row.记录编号 }}')">
+                                <i class="fas fa-eye"></i> 详情
+                            </button>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="11" class="text-center text-muted">
+                            <i class="fas fa-database fa-2x mb-2"></i><br>
+                            暂无{{ energy_key }}能耗数据
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- 汇总信息 -->
+        {% if report_data %}
+        <div class="mt-3 p-3 bg-light rounded">
+            <div class="row">
+                <div class="col-md-4">
+                    <p class="mb-1">
+                        <strong>总记录数:</strong> {{ report_data|length }} 条
+                    </p>
+                </div>
+                <div class="col-md-4">
+                    <p class="mb-1">
+                        <strong>总能耗:</strong> {{ "%.2f"|format(total_energy_by_type.get(energy_key, 0)) }} {{ energy_types_info[energy_key].unit }}
+                    </p>
+                </div>
+                <div class="col-md-4">
+                    <p class="mb-1">
+                        <strong>总成本:</strong> ¥{{ "%.2f"|format(report_data|sum(attribute='能耗成本') or 0) }}
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endfor %}
+
+<!-- 如果没有数据显示提示 -->
+{% if not energy_reports %}
+<div class="card">
+    <div class="card-body text-center text-muted py-5">
+        <i class="fas fa-database fa-3x mb-3"></i>
+        <h5>暂无能耗数据</h5>
+        <p class="mb-0">请尝试调整查询条件或确认数据库中是否存在数据</p>
+    </div>
+</div>
+{% endif %}
+
+<!-- 详情模态框 -->
+<div class="modal fade" id="detailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="detailModalTitle">能耗数据详情</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="detailContent"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 查看能耗详情
+function showEnergyDetail(energyType, recordId) {
+    const detailContent = `
+        <h6>能源类型: ${energyType}</h6>
+        <h6>记录编号: ${recordId}</h6>
+        <hr>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="card-title">数据来源</h6>
+                        <p><strong>数据表:</strong> 峰谷能耗数据表</p>
+                        <p><strong>数据类型:</strong> 日统计能耗数据</p>
+                        <p><strong>更新时间:</strong> ${new Date().toLocaleString()}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="card-title">数据说明</h6>
+                        <ul class="mb-0">
+                            <li>数据按日统计，包含峰谷时段划分</li>
+                            <li>总能耗 = 尖峰 + 高峰 + 平段 + 低谷</li>
+                            <li>能耗成本 = 总能耗 × 峰谷电价</li>
+                            <li>支持按厂区、日期范围筛选</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-3">
+            <div class="alert alert-info">
+                <h6>峰谷时段说明：</h6>
+                <ul class="mb-0">
+                    <li><strong>尖峰时段:</strong> 10:00-12:00, 16:00-18:00</li>
+                    <li><strong>高峰时段:</strong> 8:00-10:00, 12:00-16:00, 18:00-22:00</li>
+                    <li><strong>平段:</strong> 6:00-8:00, 22:00-24:00</li>
+                    <li><strong>低谷时段:</strong> 00:00-6:00</li>
+                </ul>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('detailContent').innerHTML = detailContent;
+    document.getElementById('detailModalTitle').textContent = `${energyType}能耗详情`;
+    new bootstrap.Modal(document.getElementById('detailModal')).show();
+}
+
+// 导出功能（如果需要的话）
+function exportEnergyReport() {
+    const factory_id = document.querySelector('select[name="factory_id"]').value;
+    const energy_type = document.querySelector('select[name="energy_type"]').value;
+    const start_date = document.querySelector('input[name="start_date"]').value;
+    const end_date = document.querySelector('input[name="end_date"]').value;
+    
+    const params = new URLSearchParams({
+        factory_id: factory_id || '',
+        energy_type: energy_type || '全部',
+        start_date: start_date || '',
+        end_date: end_date || ''
+    });
+    
+    window.open(`/api/report/export?${params.toString()}`, '_blank');
+}
+</script>
+
+<style>
+/* 为不同能源类型的卡片添加悬停效果 */
+.card.bg-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(13, 110, 253, 0.2); }
+.card.bg-success:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(25, 135, 84, 0.2); }
+.card.bg-warning:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(255, 193, 7, 0.2); }
+.card.bg-info:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(13, 202, 240, 0.2); }
+
+/* 表格样式优化 */
+.table th {
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.table td {
+    font-size: 0.875rem;
+    vertical-align: middle;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,1360 @@
+<!-- frontend/analyst.html -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智慧能源管理系统 - 数据分析师</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            background: #f5f5f5;
+        }
+
+        .header {
+            background: white;
+            padding: 15px 30px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo h1 {
+            color: #333;
+            font-size: 20px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .logout-btn {
+            padding: 8px 15px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .sidebar {
+            width: 250px;
+            background: white;
+            height: calc(100vh - 60px);
+            position: fixed;
+            padding: 20px 0;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .nav-menu {
+            list-style: none;
+        }
+
+        .nav-item {
+            padding: 15px 25px;
+            cursor: pointer;
+            transition: background 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .content {
+            margin-left: 250px;
+            padding: 30px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .card h2 {
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .control-group label {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .control-group input, .control-group select {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+
+        .btn:hover {
+            background: #5a67d8;
+        }
+
+        .chart-container {
+            width: 100%;
+            height: 400px;
+            margin-top: 20px;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .data-table th, .data-table td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+
+        .data-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+
+        .data-table tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+
+        .warning {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+
+        .success {
+            color: #2ecc71;
+            font-weight: bold;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .report-section {
+            margin-top: 30px;
+        }
+
+        .report-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">
+            <h1>智慧能源管理系统 - 数据分析师平台</h1>
+        </div>
+        <div class="user-info">
+            <span id="currentUser">正在加载用户信息...</span>
+            <button class="logout-btn" onclick="logout()">退出登录</button>
+        </div>
+    </div>
+
+    <div class="sidebar">
+        <ul class="nav-menu">
+            <li class="nav-item active" onclick="showSection('dashboard')">
+                <span>📊 仪表盘</span>
+            </li>
+            <li class="nav-item" onclick="showSection('pv-analysis')">
+                <span>☀️ 光伏分析</span>
+            </li>
+            <li class="nav-item" onclick="showSection('energy-analysis')">
+                <span>⚡ 能耗分析</span>
+            </li>
+            <li class="nav-item" onclick="showSection('report')">
+                <span>📈 报告生成</span>
+            </li>
+            <li class="nav-item" onclick="showSection('optimization')">
+                <span>🔧 模型优化</span>
+            </li>
+        </ul>
+    </div>
+
+    <div class="content">
+        <!-- 仪表盘 -->
+        <div id="dashboard" class="section">
+            <div class="card">
+                <h2>数据总览</h2>
+                <div id="dashboardLoading" class="loading">正在加载仪表盘数据...</div>
+                <div id="dashboardContent" style="display: none;">
+                    <div class="controls">
+                        <div class="control-group">
+                            <label>时间范围</label>
+                            <select id="dashboardRange">
+                                <option value="7">最近7天</option>
+                                <option value="30" selected>最近30天</option>
+                                <option value="90">最近90天</option>
+                            </select>
+                        </div>
+                        <button class="btn" onclick="loadDashboard()">刷新数据</button>
+                    </div>
+
+                    <div class="chart-container">
+                        <div id="pvChart" style="height: 300px;"></div>
+                    </div>
+
+                    <div class="chart-container">
+                        <div id="energyChart" style="height: 300px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 光伏分析 -->
+        <div id="pv-analysis" class="section" style="display: none;">
+            <div class="card">
+                <h2>光伏预测分析</h2>
+                <div class="controls">
+                    <div class="control-group">
+                        <label>开始日期</label>
+                        <input type="date" id="pvStartDate">
+                    </div>
+                    <div class="control-group">
+                        <label>结束日期</label>
+                        <input type="date" id="pvEndDate">
+                    </div>
+                    <button class="btn" onclick="analyzePV()">开始分析</button>
+                </div>
+
+                <div id="pvResult">
+                    <div class="loading">请选择日期范围并开始分析</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 能耗分析 -->
+        <div id="energy-analysis" class="section" style="display: none;">
+            <div class="card">
+                <h2>能耗模式分析</h2>
+                <div class="controls">
+                    <div class="control-group">
+                        <label>厂区</label>
+                        <select id="energyPlant">
+                            <option value="">全部厂区</option>
+                            <!-- 动态加载厂区 -->
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label>开始日期</label>
+                        <input type="date" id="energyStartDate">
+                    </div>
+                    <div class="control-group">
+                        <label>结束日期</label>
+                        <input type="date" id="energyEndDate">
+                    </div>
+                    <button class="btn" onclick="analyzeEnergy()">开始分析</button>
+                </div>
+
+                <div id="energyResult">
+                    <div class="loading">请选择分析条件</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 报告生成 -->
+        <div id="report" class="section" style="display: none;">
+            <div class="card">
+                <h2>能源报告生成</h2>
+                <div class="controls">
+                    <div class="control-group">
+                        <label>报告类型</label>
+                        <select id="reportType">
+                            <option value="monthly">月度报告</option>
+                            <option value="quarterly">季度报告</option>
+                            <option value="yearly">年度报告</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label>年份</label>
+                        <input type="number" id="reportYear" value="2024" min="2020" max="2030">
+                    </div>
+                    <div class="control-group" id="monthGroup">
+                        <label>月份</label>
+                        <select id="reportMonth">
+                            <option value="1">1月</option>
+                            <option value="2">2月</option>
+                            <option value="3">3月</option>
+                            <option value="4">4月</option>
+                            <option value="5">5月</option>
+                            <option value="6">6月</option>
+                            <option value="7">7月</option>
+                            <option value="8">8月</option>
+                            <option value="9">9月</option>
+                            <option value="10">10月</option>
+                            <option value="11">11月</option>
+                            <option value="12">12月</option>
+                        </select>
+                    </div>
+                    <button class="btn" onclick="generateReport()">生成报告</button>
+                </div>
+
+                <div id="reportResult">
+                    <div class="loading">请选择报告参数</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 模型优化 -->
+        <div id="optimization" class="section" style="display: none;">
+            <div class="card">
+                <h2>预测模型优化</h2>
+                <div class="controls">
+                    <div class="control-group">
+                        <label>偏差率阈值 (%)</label>
+                        <input type="number" id="deviationThreshold" value="15" min="0" max="100">
+                    </div>
+                    <button class="btn" onclick="optimizeModel()">开始优化</button>
+                </div>
+
+                <div id="optimizationResult">
+                    <div class="loading">请输入偏差率阈值并开始优化</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let currentUser = null;
+        let pvChart = null;
+        let energyChart = null;
+
+        // 页面加载时初始化
+        // document.addEventListener('DOMContentLoaded', function() {
+        //     // 获取用户信息
+        //     fetch('/current_user')
+        //         .then(response => response.json())
+        //         .then(data => {
+        //             if (data.success) {
+        //                 currentUser = data.user;
+        //                 document.getElementById('currentUser').textContent =
+        //                     `${currentUser.realname} (${currentUser.role})`;
+        //
+        //                 // 如果不是数据分析师，跳回首页
+        //                 if (currentUser.role !== '数据分析师') {
+        //                     window.location.href = '/';
+        //                 } else {
+        //                     // 初始化日期
+        //                     initDates();
+        //                     // 加载仪表盘
+        //                     loadDashboard();
+        //                 }
+        //             } else {
+        //                 window.location.href = '/';
+        //             }
+        //         })
+        //         .catch(error => {
+        //             console.error('获取用户信息失败:', error);
+        //             window.location.href = '/';
+        //         });
+        // });
+
+        document.addEventListener('DOMContentLoaded', function() {
+    // 获取用户信息
+    fetch('/current_user')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                currentUser = data.user;
+                document.getElementById('currentUser').textContent =
+                    `${currentUser.name} (${currentUser.role})`;
+
+                // 如果不是数据分析师，跳回首页
+                if (currentUser.role !== '数据分析师') {
+                    window.location.href = '/dashboard';
+                } else {
+                    // 初始化日期
+                    initDates();
+                    // 加载仪表盘
+                    loadDashboard();
+                }
+            } else {
+                // 未登录或会话过期，跳转到登录页
+                window.location.href = '/login';
+            }
+        })
+        .catch(error => {
+            console.error('获取用户信息失败:', error);
+            window.location.href = '/login';
+        });
+});
+
+        // 初始化日期控件
+        function initDates() {
+            const today = new Date();
+            const oneMonthAgo = new Date();
+            oneMonthAgo.setMonth(today.getMonth() - 1);
+
+            // 格式化日期为YYYY-MM-DD
+            const formatDate = (date) => {
+                return date.toISOString().split('T')[0];
+            };
+
+            document.getElementById('pvStartDate').value = formatDate(oneMonthAgo);
+            document.getElementById('pvEndDate').value = formatDate(today);
+
+            document.getElementById('energyStartDate').value = formatDate(oneMonthAgo);
+            document.getElementById('energyEndDate').value = formatDate(today);
+
+            document.getElementById('reportYear').value = today.getFullYear();
+            document.getElementById('reportMonth').value = today.getMonth() + 1;
+        }
+
+        // 切换页面部分
+        function showSection(sectionId) {
+            // 隐藏所有部分
+            document.querySelectorAll('.section').forEach(section => {
+                section.style.display = 'none';
+            });
+
+            // 移除所有活动的导航项
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+
+            // 显示选中的部分
+            document.getElementById(sectionId).style.display = 'block';
+
+            // 激活对应的导航项
+            document.querySelectorAll('.nav-item').forEach(item => {
+                if (item.textContent.includes(getSectionTitle(sectionId))) {
+                    item.classList.add('active');
+                }
+            });
+
+            // 根据部分加载数据
+            switch(sectionId) {
+                case 'dashboard':
+                    loadDashboard();
+                    break;
+                case 'pv-analysis':
+                    // 光伏分析页面已经可以分析
+                    break;
+                case 'energy-analysis':
+                    // 能耗分析页面已经可以分析
+                    break;
+                case 'report':
+                    // 报告生成页面已经可以生成
+                    break;
+                case 'optimization':
+                    // 模型优化页面已经可以优化
+                    break;
+            }
+        }
+
+        function getSectionTitle(sectionId) {
+            const titles = {
+                'dashboard': '仪表盘',
+                'pv-analysis': '光伏分析',
+                'energy-analysis': '能耗分析',
+                'report': '报告生成',
+                'optimization': '模型优化'
+            };
+            return titles[sectionId] || '';
+        }
+
+        // 加载仪表盘数据
+        async function loadDashboard() {
+            const dashboardLoading = document.getElementById('dashboardLoading');
+            const dashboardContent = document.getElementById('dashboardContent');
+
+            dashboardLoading.style.display = 'block';
+            dashboardContent.style.display = 'none';
+
+            try {
+                const response = await fetch('/api/analyst/dashboard');
+                const data = await response.json();
+
+                if (data.success) {
+                    displayDashboardData(data.data);
+                    dashboardLoading.style.display = 'none';
+                    dashboardContent.style.display = 'block';
+                } else {
+                    throw new Error(data.message);
+                }
+            } catch (error) {
+                dashboardLoading.innerHTML = `<div class="error">加载失败: ${error.message}</div>`;
+            }
+        }
+
+        // 显示仪表盘数据
+        function displayDashboardData(data) {
+            // 显示光伏数据图表
+            displayPVChart(data.pv_analysis);
+
+            // 显示能耗数据图表
+            displayEnergyChart(data.energy_analysis);
+        }
+
+        // 显示光伏图表
+        function displayPVChart(pvData) {
+            if (!pvData || !pvData.predictions) return;
+
+            const chartDom = document.getElementById('pvChart');
+            if (pvChart) {
+                pvChart.dispose();
+            }
+            pvChart = echarts.init(chartDom);
+
+            // 准备数据
+            const dates = pvData.predictions.map(p => p.预测日期);
+            const predicted = pvData.predictions.map(p => p.预测发电量);
+            const actual = pvData.predictions.map(p => p.实际发电量);
+
+            const option = {
+                title: {
+                    text: '光伏发电预测 vs 实际',
+                    left: 'center'
+                },
+                tooltip: {
+                    trigger: 'axis'
+                },
+                legend: {
+                    data: ['预测发电量', '实际发电量'],
+                    top: 30
+                },
+                xAxis: {
+                    type: 'category',
+                    data: dates
+                },
+                yAxis: {
+                    type: 'value',
+                    name: '发电量 (kWh)'
+                },
+                series: [
+                    {
+                        name: '预测发电量',
+                        type: 'line',
+                        data: predicted,
+                        smooth: true,
+                        lineStyle: {
+                            color: '#5470c6'
+                        }
+                    },
+                    {
+                        name: '实际发电量',
+                        type: 'line',
+                        data: actual,
+                        smooth: true,
+                        lineStyle: {
+                            color: '#91cc75'
+                        }
+                    }
+                ]
+            };
+
+            pvChart.setOption(option);
+        }
+
+        // 显示能耗图表
+        function displayEnergyChart(energyData) {
+            if (!energyData || !energyData.energy_by_type) return;
+
+            const chartDom = document.getElementById('energyChart');
+            if (energyChart) {
+                energyChart.dispose();
+            }
+            energyChart = echarts.init(chartDom);
+
+            const energyTypes = Object.keys(energyData.energy_by_type);
+            const energyValues = energyTypes.map(type => energyData.energy_by_type[type].total_energy);
+            const energyCosts = energyTypes.map(type => energyData.energy_by_type[type].total_cost);
+
+            const option = {
+                title: {
+                    text: '能源消耗分析',
+                    left: 'center'
+                },
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: {
+                        type: 'shadow'
+                    }
+                },
+                legend: {
+                    data: ['能耗量', '成本'],
+                    top: 30
+                },
+                xAxis: [
+                    {
+                        type: 'category',
+                        data: energyTypes
+                    }
+                ],
+                yAxis: [
+                    {
+                        type: 'value',
+                        name: '能耗量',
+                        position: 'left'
+                    },
+                    {
+                        type: 'value',
+                        name: '成本 (元)',
+                        position: 'right'
+                    }
+                ],
+                series: [
+                    {
+                        name: '能耗量',
+                        type: 'bar',
+                        data: energyValues,
+                        yAxisIndex: 0,
+                        itemStyle: {
+                            color: '#5470c6'
+                        }
+                    },
+                    {
+                        name: '成本',
+                        type: 'line',
+                        data: energyCosts,
+                        yAxisIndex: 1,
+                        lineStyle: {
+                            color: '#ee6666'
+                        }
+                    }
+                ]
+            };
+
+            energyChart.setOption(option);
+        }
+
+        // 光伏分析
+        async function analyzePV() {
+            const startDate = document.getElementById('pvStartDate').value;
+            const endDate = document.getElementById('pvEndDate').value;
+
+            if (!startDate || !endDate) {
+                alert('请选择开始日期和结束日期');
+                return;
+            }
+
+            const resultDiv = document.getElementById('pvResult');
+            resultDiv.innerHTML = '<div class="loading">正在分析数据...</div>';
+
+            try {
+                const response = await fetch(`/api/analyst/pv-analysis?start_date=${startDate}&end_date=${endDate}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    displayPVAnalysisResult(data.data);
+                } else {
+                    throw new Error(data.message);
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">分析失败: ${error.message}</div>`;
+            }
+        }
+
+        function displayPVAnalysisResult(data) {
+            let html = `
+                <div class="report-section">
+                    <h3>分析结果概览</h3>
+                    <div class="report-item">
+                        <p>分析时间段: ${data.predictions[0]?.预测日期 || ''} 至 ${data.predictions[data.predictions.length-1]?.预测日期 || ''}</p>
+                        <p>总预测次数: ${data.total_predictions}</p>
+                        <p>高偏差预测数: <span class="warning">${data.high_deviation_count}</span> (${data.high_deviation_percentage.toFixed(2)}%)</p>
+                        <p>平均偏差率: ${data.average_deviation.toFixed(2)}%</p>
+                        <p>最大偏差率: ${data.max_deviation.偏差率?.toFixed(2) || 0}% (${data.max_deviation.预测日期 || ''})</p>
+                    </div>
+
+                    <h3 style="margin-top: 20px;">详细预测数据</h3>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>预测编号</th>
+                                <th>日期</th>
+                                <th>预测发电量 (kWh)</th>
+                                <th>实际发电量 (kWh)</th>
+                                <th>偏差率 (%)</th>
+                                <th>状态</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            data.predictions.forEach(prediction => {
+                const statusClass = prediction.需要优化 ? 'warning' : 'success';
+                const statusText = prediction.需要优化 ? '需要优化' : '正常';
+
+                html += `
+                    <tr>
+                        <td>${prediction.预测编号}</td>
+                        <td>${prediction.预测日期}</td>
+                        <td>${prediction.预测发电量.toFixed(2)}</td>
+                        <td>${prediction.实际发电量.toFixed(2)}</td>
+                        <td>${prediction.偏差率.toFixed(2)}</td>
+                        <td class="${statusClass}">${statusText}</td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                        </tbody>
+                    </table>
+
+                    <div style="margin-top: 20px;">
+                        <button class="btn" onclick="alert('建议措施: 1. 检查天气数据准确性 2. 优化预测模型参数 3. 增加历史数据量')">
+                            查看优化建议
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('pvResult').innerHTML = html;
+        }
+
+        // 能耗分析
+        async function analyzeEnergy() {
+            const plantId = document.getElementById('energyPlant').value;
+            const startDate = document.getElementById('energyStartDate').value;
+            const endDate = document.getElementById('energyEndDate').value;
+
+            const resultDiv = document.getElementById('energyResult');
+            resultDiv.innerHTML = '<div class="loading">正在分析能耗数据...</div>';
+
+            try {
+                let url = `/api/analyst/energy-patterns?start_date=${startDate}&end_date=${endDate}`;
+                if (plantId) {
+                    url += `&plant_id=${plantId}`;
+                }
+
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.success) {
+                    displayEnergyAnalysisResult(data.data);
+                } else {
+                    throw new Error(data.message);
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">分析失败: ${error.message}</div>`;
+            }
+        }
+
+        function displayEnergyAnalysisResult(data) {
+            let html = `
+                <div class="report-section">
+                    <h3>能耗分析结果 (${data.analysis_period.start} 至 ${data.analysis_period.end})</h3>
+
+                    <div class="report-item">
+                        <p>总能耗: ${data.total_analysis.total_energy.toFixed(2)}</p>
+                        <p>总成本: ￥${data.total_analysis.total_cost.toFixed(2)}</p>
+                        <p>平均峰段占比: ${data.total_analysis.avg_peak_ratio.toFixed(2)}%</p>
+                    </div>
+
+                    <h3 style="margin-top: 20px;">按能源类型统计</h3>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>能源类型</th>
+                                <th>总能耗</th>
+                                <th>总成本 (元)</th>
+                                <th>峰段占比 (%)</th>
+                                <th>节能潜力</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            Object.entries(data.energy_by_type).forEach(([type, info]) => {
+                const savingPotential = data.energy_saving_potential.find(item => item.energy_type === type);
+                const potentialText = savingPotential ?
+                    `可节省约￥${savingPotential.estimated_saving.toFixed(2)}` : '良好';
+                const potentialClass = savingPotential ? 'warning' : 'success';
+
+                html += `
+                    <tr>
+                        <td>${type}</td>
+                        <td>${info.total_energy.toFixed(2)}</td>
+                        <td>￥${info.total_cost.toFixed(2)}</td>
+                        <td>${info.peak_ratio.toFixed(2)}%</td>
+                        <td class="${potentialClass}">${potentialText}</td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                        </tbody>
+                    </table>
+
+                    <h3 style="margin-top: 20px;">节能潜力分析</h3>
+            `;
+
+            if (data.energy_saving_potential.length > 0) {
+                data.energy_saving_potential.forEach(item => {
+                    html += `
+                        <div class="report-item warning">
+                            <p><strong>${item.energy_type}:</strong> ${item.suggestion}</p>
+                            <p>当前峰段占比: ${item.current_peak_ratio.toFixed(2)}% | 预计可节省: ￥${item.estimated_saving.toFixed(2)}</p>
+                        </div>
+                    `;
+                });
+            } else {
+                html += `
+                    <div class="report-item success">
+                        <p>当前能耗模式良好，无明显节能潜力。</p>
+                    </div>
+                `;
+            }
+
+            document.getElementById('energyResult').innerHTML = html;
+        }
+
+        // 修改 analyst.html 中的 generateReport 函数
+async function generateReport() {
+    const reportType = document.getElementById('reportType').value;
+    const year = document.getElementById('reportYear').value;
+    const month = document.getElementById('reportMonth').value;
+
+    const resultDiv = document.getElementById('reportResult');
+    resultDiv.innerHTML = '<div class="loading">正在生成报告...</div>';
+
+    try {
+        const response = await fetch('/api/analyst/generate-report', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                report_type: reportType,
+                year: parseInt(year),
+                month: parseInt(month)
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            // 显示报告内容
+            resultDiv.innerHTML = `
+                <div class="report-section">
+                    <div class="report-item success">
+                        <h3>报告生成成功！</h3>
+                        <p><strong>报告ID:</strong> ${data.report_id}</p>
+                        <p><strong>已保存到数据库</strong></p>
+                        <p><strong>生成时间:</strong> ${new Date().toLocaleString()}</p>
+                    </div>
+
+                    <h3>报告内容</h3>
+                    <div class="report-item" style="background: #f8f9fa; padding: 20px; border-radius: 5px; font-family: monospace; white-space: pre-line; line-height: 1.6;">
+                        ${data.report_content}
+                    </div>
+
+                    <div style="margin-top: 20px; display: flex; gap: 10px;">
+                        <button class="btn" onclick="downloadTextReport('${data.report_id}', \`${data.report_content.replace(/`/g, '\\`')}\`)">
+                            下载报告
+                        </button>
+                        <button class="btn" onclick="copyToClipboard('${data.report_content.replace(/'/g, "\\'")}')">
+                            复制报告
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            // 刷新报告列表
+            loadMyReports();
+        } else {
+            throw new Error(data.message);
+        }
+    } catch (error) {
+        resultDiv.innerHTML = `<div class="error">生成报告失败: ${error.message}</div>`;
+    }
+}
+
+// 下载报告函数
+function downloadTextReport(reportId, content) {
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${reportId}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+// 复制到剪贴板函数
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        alert('报告内容已复制到剪贴板');
+    }).catch(err => {
+        alert('复制失败: ' + err);
+    });
+}
+// 添加加载用户报告列表的函数
+async function loadMyReports() {
+    try {
+        const response = await fetch('/api/analyst/my-simple-reports');
+        const data = await response.json();
+
+        if (data.success) {
+            displayMyReports(data.data);
+        }
+    } catch (error) {
+        console.error('加载报告列表失败:', error);
+    }
+}
+
+// 显示用户的报告列表
+function displayMyReports(reports) {
+    const reportSection = document.getElementById('myReportsSection');
+    if (!reportSection) return;
+
+    if (reports.length === 0) {
+        reportSection.innerHTML = '<div class="loading">暂无历史报告</div>';
+        return;
+    }
+
+    let html = `
+        <h3>我的历史报告</h3>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>报告类型</th>
+                    <th>生成时间</th>
+                    <th>内容预览</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    reports.forEach(report => {
+        html += `
+            <tr>
+                <td>${report.报告类型名称}</td>
+                <td>${report.生成时间}</td>
+                <td>${report.内容预览}</td>
+                <td>
+                    <button class="btn" onclick="viewReportDetail('${report.报告ID}')">查看</button>
+                </td>
+            </tr>
+        `;
+    });
+
+    html += `
+            </tbody>
+        </table>
+    `;
+
+    reportSection.innerHTML = html;
+}
+
+// 查看报告详情
+// 查看报告详情
+async function viewReportDetail(reportId) {
+    try {
+        const response = await fetch(`/api/analyst/report/${reportId}`);
+        const data = await response.json();
+
+        if (data.success) {
+            // 直接显示报告内容，无需模态框
+            const resultDiv = document.getElementById('reportResult');
+            resultDiv.innerHTML = `
+                <div class="report-section">
+                    <div class="report-item success">
+                        <h3>报告详情</h3>
+                        <p><strong>报告ID:</strong> ${data.data.报告ID}</p>
+                        <p><strong>报告类型:</strong> ${data.data.报告类型名称}</p>
+                        <p><strong>生成时间:</strong> ${data.data.生成时间}</p>
+                        <p><strong>生成人:</strong> ${data.data.生成人}</p>
+                    </div>
+
+                    <h3>报告内容</h3>
+                    <div class="report-item" style="background: #f8f9fa; padding: 20px; border-radius: 5px; font-family: monospace; white-space: pre-line; line-height: 1.6;">
+                        ${data.data.报告内容}
+                    </div>
+
+                    <div style="margin-top: 20px; display: flex; gap: 10px;">
+                        <button class="btn" onclick="downloadTextReport('${data.data.报告ID}', \`${data.data.报告内容.replace(/`/g, '\\`')}\`)">
+                            下载报告
+                        </button>
+                        <button class="btn" onclick="copyToClipboard('${data.data.报告内容.replace(/'/g, "\\'")}')">
+                            复制报告
+                        </button>
+                        <button class="btn" onclick="showSection('report')">
+                            返回
+                        </button>
+                    </div>
+                </div>
+            `;
+        } else {
+            throw new Error(data.message);
+        }
+    } catch (error) {
+        alert(`查看报告失败: ${error.message}`);
+    }
+}
+
+// 显示报告详情模态框
+function showReportDetailModal(report) {
+    let html = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>${report.报告类型名称} - 报告详情</h3>
+                <button class="close-btn" onclick="closeModal()">×</button>
+            </div>
+            <div class="report-detail">
+                <div class="report-info">
+                    <p><strong>报告ID:</strong> ${report.报告ID}</p>
+                    <p><strong>生成时间:</strong> ${report.生成时间}</p>
+                    <p><strong>生成人:</strong> ${report.生成人}</p>
+                </div>
+                <div class="report-content">
+                    <h4>报告内容</h4>
+                    <pre style="white-space: pre-wrap; max-height: 400px; overflow-y: auto; padding: 15px; background: #f8f9fa; border-radius: 5px;">
+${report.报告内容}
+                    </pre>
+                </div>
+            </div>
+            <div style="margin-top: 20px; text-align: center;">
+                <button class="btn" onclick="downloadReport('${report.报告ID}')">下载报告</button>
+                <button class="btn" onclick="closeModal()">关闭</button>
+            </div>
+        </div>
+    `;
+
+    // 创建模态框
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.id = 'reportDetailModal';
+    modal.innerHTML = html;
+    document.body.appendChild(modal);
+    modal.style.display = 'block';
+}
+
+// 关闭模态框
+function closeModal() {
+    const modal = document.getElementById('reportDetailModal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+// 在页面加载完成后自动创建报告列表区域
+document.addEventListener('DOMContentLoaded', function() {
+    // 在报告生成部分后面添加报告列表区域
+    const reportSection = document.getElementById('report');
+    const listSection = document.createElement('div');
+    listSection.id = 'myReportsSection';
+    listSection.innerHTML = '<div class="loading">加载报告列表...</div>';
+    reportSection.appendChild(listSection);
+
+    // 加载报告列表
+    loadMyReports();
+});
+
+        // 在 analyst.html 中修改 displayReportResult 函数
+
+function displayReportResult(report) {
+    let html = `
+        <div class="report-section">
+            <div class="report-item success">
+                <h3>${report.period}能源分析报告</h3>
+                <p><strong>报告ID:</strong> ${report.report_id}</p>
+                <p><strong>生成时间:</strong> ${report.generation_time}</p>
+                <p><strong>数据范围:</strong> ${report.data_range?.start || ''} 至 ${report.data_range?.end || ''}</p>
+            </div>
+
+            <h3>报告摘要</h3>
+            <div class="report-item">
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;">
+                    <div>
+                        <p><strong>总能耗:</strong> ${(report.summary?.total_energy_consumption || 0).toFixed(2)}</p>
+                        <p><strong>总成本:</strong> ￥${(report.summary?.total_energy_cost || 0).toFixed(2)}</p>
+                        <p><strong>光伏总发电量:</strong> ${(report.summary?.total_pv_generation || 0).toFixed(2)} kWh</p>
+                    </div>
+                    <div>
+                        <p><strong>总告警次数:</strong> ${report.summary?.total_alarms || 0}</p>
+                        <p><strong>已处理告警:</strong> ${report.summary?.resolved_alarms || 0}</p>
+                        <p><strong>告警处理率:</strong> ${(report.summary?.resolution_rate || 0).toFixed(1)}%</p>
+                    </div>
+                </div>
+            </div>
+
+            <h3>详细分析</h3>
+    `;
+
+    // 按能源类型分析
+    if (report.detailed_analysis?.energy_by_type) {
+        const energyTypes = report.detailed_analysis.energy_by_type;
+        html += `
+            <div class="report-item">
+                <h4>按能源类型统计</h4>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>能源类型</th>
+                            <th>能耗量</th>
+                            <th>占比</th>
+                            <th>成本</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        Object.entries(energyTypes).forEach(([type, data]) => {
+            html += `
+                <tr>
+                    <td>${type}</td>
+                    <td>${(data.total_energy || 0).toFixed(2)}</td>
+                    <td>${(data.percentage || 0).toFixed(1)}%</td>
+                    <td>￥${(data.total_cost || 0).toFixed(2)}</td>
+                </tr>
+            `;
+        });
+
+        html += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+    }
+
+    // 按厂区分析
+    if (report.detailed_analysis?.energy_by_plant && report.detailed_analysis.energy_by_plant.length > 0) {
+        html += `
+            <div class="report-item">
+                <h4>按厂区统计</h4>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>厂区</th>
+                            <th>能耗量</th>
+                            <th>占比</th>
+                            <th>成本</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        report.detailed_analysis.energy_by_plant.forEach(plant => {
+            html += `
+                <tr>
+                    <td>${plant.plant_name || plant.plant_id}</td>
+                    <td>${(plant.total_energy || 0).toFixed(2)}</td>
+                    <td>${(plant.percentage || 0).toFixed(1)}%</td>
+                    <td>￥${(plant.total_cost || 0).toFixed(2)}</td>
+                </tr>
+            `;
+        });
+
+        html += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+    }
+
+    // 告警统计
+    html += `
+        <div class="report-item">
+            <h4>告警统计</h4>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; text-align: center;">
+                <div>
+                    <p style="color: #e74c3c; font-size: 24px; font-weight: bold;">${report.detailed_analysis?.alarm_statistics?.by_level?.高 || 0}</p>
+                    <p>高等级告警</p>
+                </div>
+                <div>
+                    <p style="color: #f39c12; font-size: 24px; font-weight: bold;">${report.detailed_analysis?.alarm_statistics?.by_level?.中 || 0}</p>
+                    <p>中等级告警</p>
+                </div>
+                <div>
+                    <p style="color: #3498db; font-size: 24px; font-weight: bold;">${report.detailed_analysis?.alarm_statistics?.by_level?.低 || 0}</p>
+                    <p>低等级告警</p>
+                </div>
+            </div>
+            <p style="text-align: center; margin-top: 10px;">
+                告警处理率: <strong>${(report.detailed_analysis?.alarm_statistics?.resolution_rate || 0).toFixed(1)}%</strong>
+            </p>
+        </div>
+    `;
+
+    // 优化建议
+    if (report.detailed_analysis?.recommendations && report.detailed_analysis.recommendations.length > 0) {
+        html += `
+            <div class="report-item">
+                <h4>优化建议</h4>
+                <ul style="list-style-type: disc; padding-left: 20px;">
+        `;
+
+        report.detailed_analysis.recommendations.forEach(rec => {
+            html += `<li style="margin-bottom: 8px;">${rec}</li>`;
+        });
+
+        html += `
+                </ul>
+            </div>
+        `;
+    }
+
+    // 数据质量说明
+    if (report.raw_data_summary) {
+        html += `
+            <div class="report-item">
+                <h4>数据质量说明</h4>
+                <p>能耗记录数: ${report.raw_data_summary.energy_records || 0}</p>
+                <p>光伏记录数: ${report.raw_data_summary.pv_records || 0}</p>
+                <p>告警记录数: ${report.raw_data_summary.alarm_records || 0}</p>
+            </div>
+        `;
+    }
+
+    html += `
+        </div>
+    `;
+
+    // 添加到页面
+    document.getElementById('reportResult').innerHTML += html;
+}
+
+        // 模型优化
+        async function optimizeModel() {
+            const threshold = document.getElementById('deviationThreshold').value;
+
+            if (!threshold || threshold < 0 || threshold > 100) {
+                alert('请输入有效的偏差率阈值 (0-100)');
+                return;
+            }
+
+            const resultDiv = document.getElementById('optimizationResult');
+            resultDiv.innerHTML = '<div class="loading">正在优化模型...</div>';
+
+            try {
+                const response = await fetch('/api/analyst/optimize-model', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        deviation_threshold: parseFloat(threshold)
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    displayOptimizationResult(data.data);
+                } else {
+                    throw new Error(data.message);
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">优化失败: ${error.message}</div>`;
+            }
+        }
+
+        function displayOptimizationResult(data) {
+            let html = `
+                <div class="report-section">
+                    <h3>模型优化结果</h3>
+                    <div class="report-item success">
+                        <p>模型优化成功完成！</p>
+                        <p>新模型版本: <strong>${data.new_model_version}</strong></p>
+                        <p>分析预测数据: ${data.analyzed_predictions} 条</p>
+                        <p>受影响设备: ${data.affected_devices.length} 台</p>
+                    </div>
+
+                    <h3 style="margin-top: 20px;">优化建议</h3>
+                    <div class="report-item">
+                        <ul>
+            `;
+
+            data.optimization_suggestions.forEach(suggestion => {
+                html += `<li>${suggestion}</li>`;
+            });
+
+            html += `
+                        </ul>
+                    </div>
+
+                    <div style="margin-top: 20px;">
+                        <button class="btn" onclick="alert('模型部署中... 预计需要5分钟完成部署。')">
+                            部署新模型
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('optimizationResult').innerHTML = html;
+        }
+
+        // 辅助函数
+        function downloadReport(reportId) {
+            alert(`模拟下载报告: ${reportId}.pdf\n在实际系统中，这里会生成并下载PDF报告。`);
+        }
+
+        function logout() {
+            fetch('/logout', { method: 'POST' })
+                .then(() => {
+                    window.location.href = '/';
+                })
+                .catch(error => {
+                    console.error('登出失败:', error);
+                    window.location.href = '/';
+                });
+        }
+
+        // 监听报告类型变化，显示/隐藏月份选择
+        document.getElementById('reportType').addEventListener('change', function() {
+            const monthGroup = document.getElementById('monthGroup');
+            if (this.value === 'monthly') {
+                monthGroup.style.display = 'flex';
+            } else {
+                monthGroup.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>

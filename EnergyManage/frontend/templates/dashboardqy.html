@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智慧能源管理大屏</title>
+    <style>
+        /* 全局样式 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Microsoft YaHei', 'Segoe UI', Arial, sans-serif;
+    background-color: #f0f2f5;
+    color: #333;
+    line-height: 1.6;
+}
+
+/* 登录页面样式 */
+.login-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.login-box {
+    background: white;
+    padding: 40px;
+    border-radius: 10px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+    width: 100%;
+    max-width: 400px;
+}
+
+.login-box h1 {
+    color: #333;
+    text-align: center;
+    margin-bottom: 10px;
+    font-size: 24px;
+}
+
+.login-box h2 {
+    color: #666;
+    text-align: center;
+    margin-bottom: 30px;
+    font-size: 18px;
+    font-weight: normal;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: #555;
+    font-weight: 500;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 16px;
+    transition: border-color 0.3s;
+}
+
+.form-group input:focus {
+    border-color: #667eea;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+.btn-login {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.btn-login:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.error-message {
+    background-color: #fee;
+    color: #c33;
+    padding: 10px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    border-left: 4px solid #c33;
+}
+
+.login-note {
+    margin-top: 20px;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 5px;
+    text-align: center;
+    color: #666;
+}
+
+/* 大屏页面样式 */
+.dashboard-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.header-left h1 {
+    color: #333;
+    font-size: 28px;
+    margin-bottom: 5px;
+}
+
+.welcome {
+    color: #666;
+    font-size: 16px;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.current-time {
+    background-color: #333;
+    color: white;
+    padding: 8px 15px;
+    border-radius: 5px;
+    font-family: monospace;
+}
+
+.btn-logout {
+    padding: 10px 20px;
+    background-color: #dc3545;
+    color: white;
+    text-decoration: none;
+    border-radius: 5px;
+    font-weight: bold;
+    transition: background-color 0.3s;
+}
+
+.btn-logout:hover {
+    background-color: #c82333;
+}
+
+.config-info {
+    background-color: #e8f4fd;
+    border-left: 4px solid #2196F3;
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 5px;
+}
+
+.config-info h2 {
+    color: #2196F3;
+    margin-bottom: 10px;
+}
+
+.dashboard-content {
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    margin-bottom: 30px;
+}
+
+.dashboard-content h2 {
+    color: #333;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.data-time {
+    color: #666;
+    font-style: italic;
+    margin-bottom: 30px;
+}
+
+.data-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 40px;
+}
+
+.data-card {
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+    transition: transform 0.3s;
+}
+
+.data-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+.data-card h3 {
+    color: #555;
+    margin-bottom: 15px;
+    font-size: 18px;
+}
+
+.data-value {
+    font-size: 28px;
+    font-weight: bold;
+    color: #333;
+}
+
+.alarm-section {
+    margin-top: 40px;
+}
+
+.alarm-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.alarm-card {
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+    color: white;
+}
+
+.alarm-card.high {
+    background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
+}
+
+.alarm-card.medium {
+    background: linear-gradient(135deg, #ffb347 0%, #ffcc33 100%);
+}
+
+.alarm-card.low {
+    background: linear-gradient(135deg, #36D1DC 0%, #5B86E5 100%);
+}
+
+.alarm-card.total {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.alarm-card h3 {
+    margin-bottom: 10px;
+    font-size: 16px;
+}
+
+.alarm-value {
+    font-size: 32px;
+    font-weight: bold;
+}
+
+.display-fields {
+    background-color: #f9f9f9;
+    padding: 15px;
+    border-radius: 5px;
+    margin-top: 30px;
+    border-left: 4px solid #4CAF50;
+}
+
+.footer {
+    text-align: center;
+    padding: 20px;
+    color: #666;
+    border-top: 1px solid #e0e0e0;
+    margin-top: 30px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .dashboard-container {
+        padding: 10px;
+    }
+
+    .header {
+        flex-direction: column;
+        text-align: center;
+        gap: 15px;
+    }
+
+    .header-right {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .data-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .alarm-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* 高等级告警推送样式 */
+.alarm-push-section {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    margin-top: 30px;
+}
+
+.alarm-push-section h2 {
+    color: #333;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #f0f0f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.pending-badge {
+    background-color: #ff9800;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: normal;
+}
+
+.alarm-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.alarm-item {
+    border-left: 4px solid;
+    padding: 15px;
+    margin-bottom: 15px;
+    background-color: #fff;
+    border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* 待决策告警样式 */
+.alarm-pending {
+    border-left-color: #ff9800;
+    background-color: #fff3e0;
+    animation: blink-pending 2s infinite;
+}
+
+@keyframes blink-pending {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.8; }
+}
+
+/* 未处理告警样式 */
+.alarm-unhandled {
+    border-left-color: #f44336;
+    background-color: #ffebee;
+}
+
+/* 处理中告警样式 */
+.alarm-processing {
+    border-left-color: #ffc107;
+    background-color: #fff9e6;
+}
+
+/* 已结案告警样式 */
+.alarm-handled {
+    border-left-color: #28a745;
+    background-color: #f0fff4;
+}
+
+.alarm-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    font-size: 14px;
+}
+
+.alarm-time {
+    color: #666;
+    font-family: monospace;
+}
+
+.alarm-type {
+    background-color: #e9ecef;
+    padding: 2px 8px;
+    border-radius: 3px;
+    color: #495057;
+}
+
+.alarm-status {
+    font-weight: bold;
+}
+
+.alarm-pending .alarm-status {
+    color: #ff9800;
+}
+
+.alarm-unhandled .alarm-status {
+    color: #f44336;
+}
+
+.alarm-processing .alarm-status {
+    color: #ffc107;
+}
+
+.alarm-handled .alarm-status {
+    color: #28a745;
+}
+
+.alarm-content {
+    font-size: 16px;
+    margin-bottom: 8px;
+    color: #333;
+}
+
+.alarm-device {
+    font-size: 14px;
+    color: #666;
+    background-color: #f8f9fa;
+    padding: 5px 10px;
+    border-radius: 3px;
+    display: inline-block;
+}
+
+.no-alarms {
+    text-align: center;
+    padding: 40px;
+    color: #28a745;
+    background-color: #f0fff4;
+    border-radius: 5px;
+    border: 2px dashed #28a745;
+}
+
+/* 滚动条样式 */
+.alarm-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.alarm-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.alarm-list::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+.alarm-list::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* 告警处理按钮样式 */
+.alarm-actions {
+    margin-top: 15px;
+    display: flex;
+    gap: 10px;
+}
+
+.btn-confirm, .btn-abandon {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 5px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-size: 14px;
+}
+
+.btn-confirm {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.btn-confirm:hover {
+    background-color: #45a049;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(76, 175, 80, 0.3);
+}
+
+.btn-abandon {
+    background-color: #6c757d;
+    color: white;
+}
+
+.btn-abandon:hover {
+    background-color: #5a6268;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(108, 117, 125, 0.3);
+}
+
+/* 处理信息样式 */
+.alarm-processing-info {
+    margin-top: 15px;
+    padding: 10px;
+    background-color: #e7f3ff;
+    border-radius: 5px;
+    color: #0066cc;
+    text-align: center;
+}
+
+.alarm-unhandled-info {
+    margin-top: 15px;
+    padding: 10px;
+    background-color: #ffebee;
+    border-radius: 5px;
+    color: #d32f2f;
+    text-align: center;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    .alarm-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
+    }
+
+    .alarm-type, .alarm-status {
+        align-self: flex-start;
+    }
+
+    .alarm-actions {
+        flex-direction: column;
+    }
+}
+/* 光伏收益卡片特殊样式 */
+.revenue-card {
+    background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%) !important;
+    color: white !important;
+}
+
+.revenue-card h3 {
+    color: white !important;
+}
+
+.revenue-card .data-value {
+    color: white !important;
+    font-size: 32px !important;
+    margin-bottom: 10px;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.revenue-details {
+    margin-top: 10px;
+    font-size: 12px;
+    opacity: 0.9;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    padding-top: 8px;
+}
+
+.revenue-details p {
+    margin: 3px 0;
+    font-size: 11px;
+}
+/* 报告查看按钮样式 */
+.report-section {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    margin-top: 30px;
+    text-align: center;
+}
+
+.report-section h2 {
+    color: #333;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.report-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.btn-report {
+    padding: 12px 24px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-report:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    .report-buttons {
+        flex-direction: column;
+    }
+
+    .btn-report {
+        width: 100%;
+        justify-content: center;
+    }
+}
+    </style>
+<!--    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">-->
+    <script>
+        // 自动刷新页面（根据配置的刷新频率）
+        function autoRefresh() {
+            setTimeout(function() {
+                location.reload();
+            }, 30000); // 默认30秒刷新一次
+        }
+
+        // 更新时间显示
+        function updateTime() {
+            const now = new Date();
+            const timeStr = now.toLocaleString('zh-CN');
+            document.getElementById('current-time').textContent = timeStr;
+        }
+
+        // 自动刷新告警数据（单独刷新，不影响整个页面）
+        function refreshAlarms() {
+            fetch('/api/management/high-alarms')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // 更新待决策告警数量
+                        const badge = document.querySelector('.pending-badge');
+                        if (badge && data.pending_count > 0) {
+                            badge.textContent = data.pending_count + ' 条待决策';
+                        } else if (badge && data.pending_count === 0) {
+                            badge.style.display = 'none';
+                        }
+
+                        // 如果有新的待决策告警，显示通知
+                        if (data.pending_count > 0) {
+                            if ('Notification' in window && Notification.permission === 'granted') {
+                                new Notification('⚠️ 有新的高等级告警待决策', {
+                                    body: `有 ${data.pending_count} 条待决策的高等级告警`,
+                                    icon: '/static/alert.png'
+                                });
+                            }
+                        }
+                    }
+                })
+                .catch(error => console.error('刷新告警失败:', error));
+        }
+
+        // 请求浏览器通知权限
+        function requestNotificationPermission() {
+            if ('Notification' in window) {
+                Notification.requestPermission().then(permission => {
+                    console.log('通知权限:', permission);
+                });
+            }
+        }
+
+        // 处理告警的函数
+        function handleAlarm(alarmId, action) {
+            const actionText = action === 'repair' ? '确认维修' : '放弃维修';
+
+            if (!confirm(`确定要${actionText}吗？`)) {
+                return;
+            }
+
+            fetch('/api/management/handle-alarm', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    alarm_id: alarmId,
+                    action: action
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+
+                    // 更新页面上的告警状态
+                    const alarmElement = document.getElementById(`alarm-${alarmId}`);
+                    if (alarmElement) {
+                        const statusElement = alarmElement.querySelector('.alarm-status');
+                        const actionsElement = alarmElement.querySelector('.alarm-actions');
+
+                        if (statusElement) {
+                            statusElement.textContent = data.new_status;
+                        }
+
+                        // 更新样式
+                        if (data.new_status === '未处理') {
+                            alarmElement.className = 'alarm-item alarm-unhandled';
+                            // 移除操作按钮，显示未处理信息
+                            if (actionsElement) {
+                                actionsElement.innerHTML =
+                                    '<div class="alarm-unhandled-info"><p>⚠️ 告警已确认维修，等待处理</p></div>';
+                            }
+                        } else if (data.new_status === '已结案') {
+                            alarmElement.className = 'alarm-item alarm-handled';
+                            // 移除操作按钮
+                            if (actionsElement) {
+                                actionsElement.innerHTML =
+                                    '<div class="alarm-processing-info"><p>✅ 告警已放弃维修</p></div>';
+                            }
+                        }
+                    }
+
+                    // 刷新告警列表
+                    refreshAlarms();
+                } else {
+                    alert('操作失败: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('处理告警失败:', error);
+                alert('网络错误，请重试');
+            });
+        }
+
+        // 页面加载完成后执行
+        window.onload = function() {
+            autoRefresh();
+            updateTime();
+            requestNotificationPermission();
+
+            // 每30秒刷新一次时间
+            setInterval(updateTime, 1000);
+
+            // 每20秒刷新一次告警数据
+            setInterval(refreshAlarms, 20000);
+        };
+    </script>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- 顶部导航栏 -->
+        <div class="header">
+            <div class="header-left">
+                <h1>智慧能源管理大屏</h1>
+                <p class="welcome">欢迎您，{{ user.真实姓名 }}（{{ user.用户角色 }}）</p>
+            </div>
+            <div class="header-right">
+                <div class="current-time" id="current-time"></div>
+                <a href="{{ url_for('logout') }}" class="btn-logout">退出登录</a>
+            </div>
+        </div>
+
+        <!-- 错误提示 -->
+        {% if error %}
+        <div class="error-message">{{ error }}</div>
+        {% endif %}
+
+        <!-- 配置信息 -->
+        {% if config %}
+        <div class="config-info">
+            <h2>大屏配置信息</h2>
+            <p>展示模块：{{ config.展示模块 }}</p>
+            <p>刷新频率：{{ config.数据刷新频率 }}</p>
+            <p>排序规则：{{ config.排序规则 }}</p>
+        </div>
+        {% endif %}
+
+        <!-- 主要数据显示区域 -->
+        {% if data %}
+        <div class="dashboard-content">
+            <h2>能源运行总览</h2>
+            <p class="data-time">数据时间：{{ data.统计时间 }}</p>
+
+            <div class="data-grid">
+                <!-- 用电数据 -->
+                <div class="data-card">
+                    <h3>用电情况</h3>
+                    <div class="data-value">{{ data.总用电量|default(0)|float }} kWh</div>
+                </div>
+
+                <!-- 用水数据 -->
+                <div class="data-card">
+                    <h3>用水情况</h3>
+                    <div class="data-value">{{ data.总用水量|default(0)|float }} m³</div>
+                </div>
+
+                <!-- 蒸汽数据 -->
+                <div class="data-card">
+                    <h3>蒸汽消耗</h3>
+                    <div class="data-value">{{ data.总蒸汽消耗量|default(0)|float }} t</div>
+                </div>
+
+                <!-- 天然气数据 -->
+                <div class="data-card">
+                    <h3>天然气消耗</h3>
+                    <div class="data-value">{{ data.总天然气消耗量|default(0)|float }} m³</div>
+                </div>
+
+                <!-- 光伏发电数据 -->
+                <div class="data-card">
+                    <h3>光伏总发电量</h3>
+                    <div class="data-value">{{ data.光伏总发电量|default(0)|float }} kWh</div>
+                </div>
+
+                <!-- 光伏自用电数据 -->
+                <div class="data-card">
+                    <h3>光伏自用电量</h3>
+                    <div class="data-value">{{ data.光伏自用电量|default(0)|float }} kWh</div>
+                </div>
+
+                <!-- 新增：光伏收益 -->
+                <div class="data-card revenue-card">
+                    <h3>光伏收益</h3>
+                    <div class="data-value">¥ {{ data.光伏收益|default(0)|float }}</div>
+                    <div class="revenue-details">
+                        <p>自用电价：¥ {{ data.自用电价|default(0.8)|float }} /kWh</p>
+                        <p>上网电价：¥ {{ data.上网电价|default(0.4)|float }} /kWh</p>
+                        {% if data.光伏剩余上网电量 is defined %}
+                        <p>上网电量：{{ data.光伏剩余上网电量|float }} kWh</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- 告警统计 -->
+            <div class="alarm-section">
+                <h2>告警统计</h2>
+                <div class="alarm-grid">
+                    <div class="alarm-card high">
+                        <h3>高等级告警</h3>
+                        <div class="alarm-value">{{ data.高等级告警数|default(0) }}</div>
+                    </div>
+
+                    <div class="alarm-card medium">
+                        <h3>中等级告警</h3>
+                        <div class="alarm-value">{{ data.中等级告警数|default(0) }}</div>
+                    </div>
+
+                    <div class="alarm-card low">
+                        <h3>低等级告警</h3>
+                        <div class="alarm-value">{{ data.低等级告警数|default(0) }}</div>
+                    </div>
+
+                    <div class="alarm-card total">
+                        <h3>总告警次数</h3>
+                        <div class="alarm-value">{{ data.总告警次数|default(0) }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 高等级告警推送区域（设备故障） -->
+            <div class="alarm-push-section">
+                <h2>
+                    🔴 高等级告警推送（设备故障）
+                    {% if pending_count > 0 %}
+                    <span class="pending-badge">{{ pending_count }} 条待决策</span>
+                    {% endif %}
+                </h2>
+
+                {% if high_alarms %}
+                <div class="alarm-list">
+                    {% for alarm in high_alarms %}
+                    <div class="alarm-item
+                        {% if alarm.处理状态 == '待决策' %}alarm-pending
+                        {% elif alarm.处理状态 == '处理中' %}alarm-processing
+                        {% elif alarm.处理状态 == '未处理' %}alarm-unhandled
+                        {% else %}alarm-handled{% endif %}"
+                        id="alarm-{{ alarm.告警ID }}">
+                        <div class="alarm-header">
+                            <span class="alarm-time">{{ alarm.发生时间 }}</span>
+                            <span class="alarm-type">{{ alarm.告警类型 }}</span>
+                            <span class="alarm-status">{{ alarm.处理状态 }}</span>
+                        </div>
+                        <div class="alarm-content">
+                            {{ alarm.告警内容 }}
+                        </div>
+                        {% if alarm.关联设备编号 %}
+                        <div class="alarm-device">
+                            设备编号：{{ alarm.关联设备编号 }}
+                        </div>
+                        {% endif %}
+
+                        <!-- 处理按钮（只对待决策的告警显示） -->
+                        {% if alarm.处理状态 == '待决策' %}
+                        <div class="alarm-actions">
+                            <button class="btn-confirm" onclick="handleAlarm('{{ alarm.告警ID }}', 'repair')">
+                                ✅ 确认维修
+                            </button>
+                            <button class="btn-abandon" onclick="handleAlarm('{{ alarm.告警ID }}', 'abandon')">
+                                ❌ 放弃维修
+                            </button>
+                        </div>
+                        {% elif alarm.处理状态 == '处理中' %}
+                        <div class="alarm-processing-info">
+                            <p>⏳ 告警正在处理中...</p>
+                        </div>
+                        {% elif alarm.处理状态 == '未处理' %}
+                        <div class="alarm-unhandled-info">
+                            <p>⚠️ 告警已确认维修，等待处理</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="no-alarms">
+                    <p>✅ 当前无高等级设备故障告警</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- 数据展示字段（如果配置中有） -->
+            {% if config and config.展示字段 %}
+            <div class="display-fields">
+                <h3>配置的展示字段：</h3>
+                <p>{{ config.展示字段 }}</p>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+        <!-- 在页脚之前添加报告查看按钮 -->
+{% if data %}
+<div class="report-section">
+    <h2>📋 能耗总结报告</h2>
+    <div class="report-buttons">
+        <button class="btn-report" onclick="openMonthlyReports()">
+            📅 查看月度总结报告
+        </button>
+        <button class="btn-report" onclick="openQuarterlyReports()">
+            📊 查看季度总结报告
+        </button>
+    </div>
+</div>
+{% endif %}
+
+<script>
+// 在页面添加JavaScript函数
+function openMonthlyReports() {
+    window.location.href = '/management/reports/monthly';
+}
+
+function openQuarterlyReports() {
+    window.location.href = '/management/reports/quarterly';
+}
+</script>
+        <!-- 页脚 -->
+        <div class="footer">
+            <p>智慧能源管理系统 © 2025 北京林业大学</p>
+            <p>数据更新时间：<span id="update-time">{{ data.统计时间 if data else '暂无数据' }}</span></p>
+        </div>
+    </div>
+</body>
+</html>

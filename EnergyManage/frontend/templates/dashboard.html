@@ -1,0 +1,457 @@
+{% extends "base.html" %}
+
+{% block title %}仪表板 - 智慧能源管理系统{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">能源管理仪表板</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <button class="btn btn-sm btn-outline-secondary" onclick="refreshDashboard()">
+            <i class="fas fa-sync-alt"></i> 刷新
+        </button>
+    </div>
+</div>
+
+<!-- KPI卡片 -->
+<!-- KPI卡片 -->
+<div class="row mb-4">
+    <!-- 电能耗 -->
+    <div class="col-md-3">
+        <div class="card text-white bg-primary mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">本月用电</h6>
+                        <h3 class="card-text">
+                            {% for energy in monthly_data.energy_by_type %}
+                                {% if energy.type == '电' %}
+                                    {{ energy.value }}
+                                {% endif %}
+                            {% else %}
+                                0 kWh
+                            {% endfor %}
+                        </h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-bolt fa-2x"></i>
+                    </div>
+                </div>
+                <small class="card-text opacity-75">
+                    来源：峰谷能耗数据表 | 本月累计
+                </small>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 水能耗 -->
+    <div class="col-md-3">
+        <div class="card text-white bg-success mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">本月用水</h6>
+                        <h3 class="card-text">
+                            {% for energy in monthly_data.energy_by_type %}
+                                {% if energy.type == '水' %}
+                                    {{ energy.value }}
+                                {% endif %}
+                            {% else %}
+                                0 m³
+                            {% endfor %}
+                        </h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-tint fa-2x"></i>
+                    </div>
+                </div>
+                <small class="card-text opacity-75">
+                    来源：峰谷能耗数据表 | 本月累计
+                </small>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 蒸汽能耗 -->
+    <div class="col-md-3">
+        <div class="card text-white bg-info mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">本月用蒸汽</h6>
+                        <h3 class="card-text">
+                            {% for energy in monthly_data.energy_by_type %}
+                                {% if energy.type == '蒸汽' %}
+                                    {{ energy.value }}
+                                {% endif %}
+                            {% else %}
+                                0 t
+                            {% endfor %}
+                        </h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-fire fa-2x"></i>
+                    </div>
+                </div>
+                <small class="card-text opacity-75">
+                    来源：峰谷能耗数据表 | 本月累计
+                </small>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 天然气能耗 -->
+    <div class="col-md-3">
+        <div class="card text-white bg-warning mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">本月用天然气</h6>
+                        <h3 class="card-text">
+                            {% for energy in monthly_data.energy_by_type %}
+                                {% if energy.type == '天然气' %}
+                                    {{ energy.value }}
+                                {% endif %}
+                            {% else %}
+                                0 m³
+                            {% endfor %}
+                        </h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-gas-pump fa-2x"></i>
+                    </div>
+                </div>
+                <small class="card-text opacity-75">
+                    来源：峰谷能耗数据表 | 本月累计
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 第二行：成本和项目卡片 -->
+<div class="row mb-4">
+    <!-- 能耗成本 -->
+    <div class="col-md-4">
+        <div class="card text-white bg-danger mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">本月能耗成本</h6>
+                        <h3 class="card-text">
+                            {% if monthly_data.total_cost %}
+                                ¥{{ "%.0f"|format(monthly_data.total_cost) }}
+                            {% else %}
+                                ¥0
+                            {% endif %}
+                        </h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-yen-sign fa-2x"></i>
+                    </div>
+                </div>
+                <small class="card-text opacity-75">
+                    来源：峰谷能耗数据表 | 本月累计 | 所有能源类型总和
+                </small>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 节能项目 -->
+    <div class="col-md-4">
+        <div class="card text-white bg-secondary mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">节能项目</h6>
+                        <h3 class="card-text">{{ optimization_count }}个</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-leaf fa-2x"></i>
+                    </div>
+                </div>
+                <small class="card-text opacity-75">
+                    来源：能耗优化方案表 | 已审批/执行中
+                </small>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 待处理告警 -->
+    <div class="col-md-4">
+        <div class="card text-white bg-dark mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">待处理告警</h6>
+                        <h3 class="card-text">
+                            {{ alerts|selectattr("处理状态", "equalto", "未处理")|list|length }}个
+                        </h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-exclamation-triangle fa-2x"></i>
+                    </div>
+                </div>
+                <small class="card-text opacity-75">
+                    来源：告警信息表 | 未处理状态
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 图表 -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">能耗趋势（最近7天）</h5>
+                <small class="text-muted">来源：峰谷能耗数据表 | 按能源类型分组</small>
+            </div>
+            <div class="card-body">
+                <canvas id="trendChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">能源构成（本月）</h5>
+                <small class="text-muted">来源：峰谷能耗数据表 | 本月累计</small>
+            </div>
+            <div class="card-body">
+                <canvas id="compositionChart" height="200"></canvas>
+                <div class="mt-3">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>能源类型</th>
+                                <th>能耗</th>
+                                <th>占比</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for i in range(composition_chart_data.labels|length) %}
+                            <tr>
+                                <td>{{ composition_chart_data.labels[i] }}</td>
+                                <td>{{ "%.0f"|format(composition_chart_data.data[i]) }}</td>
+                                <td>{{ "%.1f"|format(composition_chart_data.percentages[i]) }}%</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 近期告警 -->
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">近期告警</h5>
+            </div>
+            <div class="card-body">
+                {% if alerts %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>时间</th>
+                                <th>类型</th>
+                                <th>设备</th>
+                                <th>等级</th>
+                                <th>状态</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for alert in alerts %}
+                            <tr>
+                                <td>{{ alert.发生时间 }}</td>
+                                <td>{{ alert.告警类型 }}</td>
+                                <td>{{ alert.关联设备编号 }}</td>
+                                <td>
+                                    {% if alert.告警等级 == '高' %}
+                                    <span class="badge bg-danger">高</span>
+                                    {% elif alert.告警等级 == '中' %}
+                                    <span class="badge bg-warning">中</span>
+                                    {% else %}
+                                    <span class="badge bg-info">低</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if alert.处理状态 == '未处理' %}
+                                    <span class="badge bg-danger">未处理</span>
+                                    {% elif alert.处理状态 == '处理中' %}
+                                    <span class="badge bg-warning">处理中</span>
+                                    {% else %}
+                                    <span class="badge bg-success">已处理</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">暂无告警</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function refreshDashboard() {
+    location.reload();
+}
+
+// 渲染趋势图表
+document.addEventListener('DOMContentLoaded', function() {
+    // 能耗趋势图
+    const trendData = {{ trend_data|safe }};
+    const trendCtx = document.getElementById('trendChart').getContext('2d');
+    
+    const dates = Object.keys(trendData);
+    const datasets = [];
+    const colors = {
+        '电': '#4e73df',
+        '水': '#1cc88a',
+        '蒸汽': '#36b9cc',
+        '天然气': '#f6c23e',
+        '光伏': '#e74a3b'
+    };
+    
+    // 收集所有能源类型
+    const energyTypes = new Set();
+    dates.forEach(date => {
+        Object.keys(trendData[date]).forEach(type => energyTypes.add(type));
+    });
+    
+    energyTypes.forEach(type => {
+        const data = dates.map(date => trendData[date][type] || 0);
+        datasets.push({
+            label: type,
+            data: data,
+            borderColor: colors[type] || '#999',
+            backgroundColor: colors[type] + '20' || '#999',
+            tension: 0.3,
+            fill: true
+        });
+    });
+    
+    if (dates.length > 0) {
+        new Chart(trendCtx, {
+            type: 'line',
+            data: {
+                labels: dates,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                label += context.parsed.y.toFixed(2) + ' 单位';
+                                return label;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: '能耗 (单位)'
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return value.toLocaleString() + ' 单位';
+                            }
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: '日期'
+                        }
+                    }
+                },
+                interaction: {
+                    intersect: false,
+                    mode: 'nearest'
+                }
+            }
+        });
+    } else {
+        trendCtx.font = '14px Arial';
+        trendCtx.textAlign = 'center';
+        trendCtx.textBaseline = 'middle';
+        trendCtx.fillStyle = '#999';
+        trendCtx.fillText('暂无数据', trendCtx.canvas.width / 2, trendCtx.canvas.height / 2);
+    }
+    
+    // 能源构成图（基于实际数据）
+    const compCtx = document.getElementById('compositionChart').getContext('2d');
+    
+    // 从模板变量获取数据
+    const compositionLabels = {{ composition_chart_data.labels|tojson|safe }};
+    const compositionData = {{ composition_chart_data.data|tojson|safe }};
+    const compositionColors = {{ composition_chart_data.colors|tojson|safe }};
+    
+    if (compositionLabels.length > 0 && compositionData.length > 0) {
+        new Chart(compCtx, {
+            type: 'pie',
+            data: {
+                labels: compositionLabels,
+                datasets: [{
+                    data: compositionData,
+                    backgroundColor: compositionColors,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.raw || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                return `${label}: ${value.toLocaleString()} 单位 (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    } else {
+        compCtx.font = '14px Arial';
+        compCtx.textAlign = 'center';
+        compCtx.textBaseline = 'middle';
+        compCtx.fillStyle = '#999';
+        compCtx.fillText('暂无数据', compCtx.canvas.width / 2, compCtx.canvas.height / 2);
+    }
+});
+</script>
+{% endblock %}

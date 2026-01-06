@@ -1,0 +1,473 @@
+{% extends "workorder/base.html" %}
+
+{% block title %}工单管理 - 智慧能源管理系统{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h2><i class="fas fa-tasks me-2"></i> 工单管理</h2>
+            <div>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#filterModal">
+                    <i class="fas fa-filter me-2"></i> 筛选
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 统计摘要 -->
+<div class="row mb-4">
+    <div class="col-md-3 col-6 mb-3">
+        <div class="card shadow-sm bg-primary text-white">
+            <div class="card-body p-3">
+                <h6 class="card-subtitle mb-2 opacity-75">总工单数</h6>
+                <h4 class="card-title">{{ stats.total or 0 }}</h4>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 col-6 mb-3">
+        <div class="card shadow-sm bg-warning text-dark">
+            <div class="card-body p-3">
+                <h6 class="card-subtitle mb-2 opacity-75">进行中</h6>
+                <h4 class="card-title">{{ stats.pending or 0 }}</h4>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 col-6 mb-3">
+        <div class="card shadow-sm bg-info text-white">
+            <div class="card-body p-3">
+                <h6 class="card-subtitle mb-2 opacity-75">待复查</h6>
+                <h4 class="card-title">{{ stats.to_review or 0 }}</h4>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 col-6 mb-3">
+        <div class="card shadow-sm bg-danger text-white">
+            <div class="card-body p-3">
+                <h6 class="card-subtitle mb-2 opacity-75">未通过</h6>
+                <h4 class="card-title">{{ stats.failed or 0 }}</h4>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 工单列表 -->
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">工单列表</h5>
+                <span class="badge bg-primary">共 {{ work_orders|length }} 条记录</span>
+            </div>
+            <div class="card-body">
+                {% if work_orders %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>工单编号</th>
+                                <th>告警类型</th>
+                                <th>设备名称</th>
+                                <th>运维人员</th>
+                                <th>派单时间</th>
+                                <th>状态</th>
+                                <th>处理时长</th>
+                                <th>复查状态</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in work_orders %}
+                            <tr class="{% if order.工单状态 == '未响应' %}table-danger
+                                      {% elif order.工单状态 == '处理超时' %}table-warning
+                                      {% elif order.工单状态 == '待复查' %}table-info
+                                      {% endif %}">
+                                <td>
+                                    <strong>{{ order.工单编号 }}</strong>
+                                    {% if order.工单状态 == '未响应' %}
+                                    <span class="badge bg-danger ms-1">!</span>
+                                    {% elif order.工单状态 == '处理超时' %}
+                                    <span class="badge bg-warning ms-1">!</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ order.告警类型 }}</td>
+                                <td>{{ order.设备名称 or 'N/A' }}</td>
+                                <td>{{ order.运维人员姓名 or 'N/A' }}</td>
+                                <td>{{ order.派单时间.strftime('%m-%d %H:%M') if order.派单时间 else 'N/A' }}</td>
+                                <td>
+                                    {% if order.工单状态 == '未响应' %}
+                                    <span class="badge bg-danger">未响应</span>
+                                    {% elif order.工单状态 == '处理超时' %}
+                                    <span class="badge bg-warning text-dark">处理超时</span>
+                                    {% elif order.工单状态 == '处理中' %}
+                                    <span class="badge bg-primary">处理中</span>
+                                    {% elif order.工单状态 == '待复查' %}
+                                    <span class="badge bg-info">待复查</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">{{ order.工单状态 }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if order.处理完成时间 %}
+                                    {{ order.处理耗时 or 'N/A' }}分钟
+                                    {% else %}
+                                    {{ order.派单时长 }}分钟
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if order.复查状态 == '通过' %}
+                                    <span class="badge bg-success">通过</span>
+                                    {% elif order.复查状态 == '未通过' %}
+                                    <span class="badge bg-danger">未通过</span>
+                                    {% elif order.处理完成时间 and order.复查状态 == '' %}
+                                    <span class="badge bg-warning text-dark">待复查</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-primary track-progress" 
+                                                data-order-id="{{ order.工单ID }}"
+                                                title="跟踪进度">
+                                            <i class="fas fa-chart-line"></i>
+                                        </button>
+                                        {% if order.处理完成时间 and not order.复查状态 %}
+                                        <!-- 快速复查按钮 -->
+                                        <button class="btn btn-outline-success quick-review-pass" 
+                                                data-order-id="{{ order.工单ID }}"
+                                                data-alarm-id="{{ order.告警ID }}"
+                                                title="快速通过">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                        <button class="btn btn-outline-danger quick-review-fail" 
+                                                data-order-id="{{ order.工单ID }}"
+                                                data-alarm-id="{{ order.告警ID }}"
+                                                title="快速不通过">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                        <!-- 保留原有的复查按钮 -->
+                                        <a href="{{ url_for('workorder_review_work_order', work_order_id=order.工单ID) }}"
+                                           class="btn btn-outline-warning" title="详细复查">
+                                            <i class="fas fa-user-check"></i>
+                                        </a>
+                                        {% endif %}
+                                        {% if order.复查状态 == '未通过' %}
+                                        <button class="btn btn-outline-danger reassign-order"
+                                                data-order-id="{{ order.工单ID }}"
+                                                data-alarm-id="{{ order.告警ID }}"
+                                                title="重新派单">
+                                            <i class="fas fa-redo"></i>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                    <h5 class="text-muted">暂无工单信息</h5>
+                    <p class="text-muted">当前筛选条件下没有找到工单记录</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 筛选模态框 -->
+<div class="modal fade" id="filterModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">筛选条件</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="GET" action="{{ url_for('workorder_work_orders') }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">工单状态</label>
+                        <select class="form-select" name="status">
+                            <option value="all" {% if current_filters.status == 'all' %}selected{% endif %}>全部状态</option>
+                            <option value="pending" {% if current_filters.status == 'pending' %}selected{% endif %}>进行中</option>
+                            <option value="completed" {% if current_filters.status == 'completed' %}selected{% endif %}>已完成</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">运维人员</label>
+                        <select class="form-select" name="operator_id">
+                            <option value="all" {% if current_filters.operator_id == 'all' %}selected{% endif %}>全部人员</option>
+                            {% for operator in operators %}
+                            <option value="{{ operator.用户ID }}" 
+                                {% if current_filters.operator_id == operator.用户ID %}selected{% endif %}>
+                                {{ operator.真实姓名 }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">复查状态</label>
+                        <select class="form-select" name="review_status">
+                            <option value="all" {% if current_filters.review_status == 'all' %}selected{% endif %}>全部状态</option>
+                            <option value="通过" {% if current_filters.review_status == '通过' %}selected{% endif %}>通过</option>
+                            <option value="未通过" {% if current_filters.review_status == '未通过' %}selected{% endif %}>未通过</option>
+                            <option value="待复查" {% if current_filters.review_status == '待复查' %}selected{% endif %}>待复查</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary">应用筛选</button>
+                    <a href="{{ url_for('workorder_work_orders') }}" class="btn btn-outline-danger">清除筛选</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 进度跟踪模态框 -->
+<div class="modal fade" id="progressModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">工单进度跟踪</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="progressContent">
+                <!-- 动态加载进度信息 -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 快速复查不通过模态框 -->
+<div class="modal fade" id="quickReviewFailModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title">快速复查 - 不通过</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="quickFailOrderId">
+                <input type="hidden" id="quickFailAlarmId">
+                
+                <div class="mb-3">
+                    <label class="form-label">不通过原因</label>
+                    <textarea class="form-control" id="quickFailReason" rows="4" 
+                              placeholder="请简要说明不通过的原因..."></textarea>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">重新派单给</label>
+                    <select class="form-select" id="quickReassignOperator">
+                        <option value="">不重新派单</option>
+                        {% for operator in operators %}
+                        <option value="{{ operator.用户ID }}">{{ operator.真实姓名 }}</option>
+                        {% endfor %}
+                    </select>
+                    <small class="text-muted">如果不重新派单，告警将保持"未处理"状态</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-danger" id="confirmQuickFail">确认不通过</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    // 跟踪进度
+    $('.track-progress').click(function() {
+        const orderId = $(this).data('order-id');
+        
+        $.ajax({
+            url: '/api/workorder/track_progress/' + orderId,
+            method: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    const data = response.data;
+                    
+                    let progressHtml = `
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>工单信息</h6>
+                                <p><strong>工单ID：</strong>${data.工单ID}</p>
+                                <p><strong>告警等级：</strong>${data.告警等级}</p>
+                                <p><strong>设备名称：</strong>${data.设备名称}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>运维信息</h6>
+                                <p><strong>运维人员：</strong>${data.运维人员}</p>
+                                <p><strong>联系电话：</strong>${data.手机号码}</p>
+                                <p><strong>当前状态：</strong>
+                                    <span class="badge ${data.告警状态 === '正常' ? 'bg-success' : 'bg-danger'}">
+                                        ${data.告警状态}
+                                    </span>
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <hr>
+                        
+                        <div class="row">
+                            <div class="col-md-4 text-center">
+                                <div class="card ${data.响应时间 ? 'bg-success text-white' : 'bg-secondary text-white'}">
+                                    <div class="card-body">
+                                        <h6>派单时间</h6>
+                                        <p>${new Date(data.派单时间).toLocaleString()}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 text-center">
+                                <div class="card ${data.响应时间 ? 'bg-success text-white' : 'bg-warning text-dark'}">
+                                    <div class="card-body">
+                                        <h6>响应时间</h6>
+                                        <p>${data.响应时间 ? new Date(data.响应时间).toLocaleString() : '未响应'}</p>
+                                        <small>响应时长：${data.响应时长}分钟</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 text-center">
+                                <div class="card ${data.处理完成时间 ? 'bg-success text-white' : 'bg-warning text-dark'}">
+                                    <div class="card-body">
+                                        <h6>完成时间</h6>
+                                        <p>${data.处理完成时间 ? new Date(data.处理完成时间).toLocaleString() : '未完成'}</p>
+                                        <small>处理时长：${data.处理时长}分钟</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // 如果状态异常，显示提醒
+                    if (data.告警状态 !== '正常') {
+                        progressHtml += `
+                            <div class="alert alert-danger mt-3">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <strong>告警：</strong>${data.告警状态}
+                                <br>
+                                <small>建议：立即联系运维人员 ${data.运维人员} (${data.手机号码})</small>
+                            </div>
+                        `;
+                    }
+                    
+                    $('#progressContent').html(progressHtml);
+                    $('#progressModal').modal('show');
+                } else {
+                    alert('获取进度失败：' + response.message);
+                }
+            },
+            error: function() {
+                alert('请求失败，请检查网络连接');
+            }
+        });
+    });
+    
+    // 快速复查通过
+    $('.quick-review-pass').click(function() {
+        const orderId = $(this).data('order-id');
+        const alarmId = $(this).data('alarm-id');
+        
+        if (confirm('确定要快速通过此工单的复查吗？\n\n系统将：\n1. 标记工单复查状态为"通过"\n2. 更新告警状态为"已结案"')) {
+            $.ajax({
+                url: '/api/workorder/quick_review',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    work_order_id: orderId,
+                    alarm_id: alarmId,
+                    review_status: '通过',
+                    review_notes: '快速复查通过'
+                }),
+                success: function(response) {
+                    if (response.success) {
+                        alert('工单已快速通过复查');
+                        location.reload();
+                    } else {
+                        alert('操作失败：' + response.message);
+                    }
+                },
+                error: function() {
+                    alert('请求失败，请检查网络连接');
+                }
+            });
+        }
+    });
+    
+    // 快速复查不通过
+    $('.quick-review-fail').click(function() {
+        const orderId = $(this).data('order-id');
+        const alarmId = $(this).data('alarm-id');
+        
+        $('#quickFailOrderId').val(orderId);
+        $('#quickFailAlarmId').val(alarmId);
+        $('#quickFailReason').val('');
+        $('#quickReassignOperator').val('');
+        $('#quickReviewFailModal').modal('show');
+    });
+    
+    // 确认快速复查不通过
+    $('#confirmQuickFail').click(function() {
+        const orderId = $('#quickFailOrderId').val();
+        const alarmId = $('#quickFailAlarmId').val();
+        const reason = $('#quickFailReason').val();
+        const reassignId = $('#quickReassignOperator').val();
+        
+        if (!reason.trim()) {
+            alert('请输入不通过原因');
+            return;
+        }
+        
+        $.ajax({
+            url: '/api/quick_review',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                work_order_id: orderId,
+                alarm_id: alarmId,
+                review_status: '未通过',
+                review_notes: reason,
+                re_assign_id: reassignId || null
+            }),
+            success: function(response) {
+                if (response.success) {
+                    alert('工单已标记为不通过');
+                    location.reload();
+                } else {
+                    alert('操作失败：' + response.message);
+                }
+            },
+            error: function() {
+                alert('请求失败，请检查网络连接');
+            }
+        });
+    });
+    
+    // 重新派单
+    $('.reassign-order').click(function() {
+        const orderId = $(this).data('order-id');
+        const alarmId = $(this).data('alarm-id');
+        
+        if (confirm('确定要重新派单吗？系统将创建一个新的工单并分配。')) {
+            // 这里可以跳转到重新派单页面或显示模态框
+            window.location.href = "{{ url_for('workorder_alarms') }}?status=未处理";
+        }
+    });
+});
+</script>
+{% endblock %}

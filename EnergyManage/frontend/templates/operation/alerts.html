@@ -1,0 +1,1477 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>告警管理 - 智慧能源管理系统</title>
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #667eea;
+            --secondary: #764ba2;
+        }
+        body {
+            background-color: #f8f9fa;
+        }
+        .sidebar {
+            background: linear-gradient(180deg, var(--primary) 0%, var(--secondary) 100%);
+            min-height: 100vh;
+            color: white;
+            position: fixed;
+            width: 250px;
+        }
+        .sidebar-header {
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .nav-link {
+            color: rgba(255,255,255,0.8);
+            padding: 12px 20px;
+            margin: 5px 10px;
+            border-radius: 10px;
+            transition: all 0.3s;
+        }
+        .nav-link:hover, .nav-link.active {
+            color: white;
+            background: rgba(255,255,255,0.1);
+        }
+        .nav-link i {
+            width: 24px;
+            text-align: center;
+            margin-right: 10px;
+        }
+        .main-content {
+            margin-left: 250px;
+            padding: 20px;
+        }
+        .page-header {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+        .stats-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+            transition: all 0.3s;
+        }
+        .stats-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        .stat-number {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        .stat-title {
+            color: #6c757d;
+            font-size: 14px;
+        }
+        .alert-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 5px solid #dc3545;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+            transition: all 0.3s;
+        }
+        .alert-card:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .alert-card.high { border-left-color: #dc3545; }
+        .alert-card.medium { border-left-color: #ffc107; }
+        .alert-card.low { border-left-color: #17a2b8; }
+        .alert-card.processed { border-left-color: #28a745; opacity: 0.8; }
+        .alert-status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .status-unprocessed { background: #f8d7da; color: #721c24; }
+        .status-acknowledged { background: #fff3cd; color: #856404; }
+        .status-processed { background: #d4edda; color: #155724; }
+        .status-in-progress { background: #d1ecf1; color: #0c5460; }
+        .alert-priority {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+        .priority-high { background: #dc3545; color: white; }
+        .priority-medium { background: #ffc107; color: #212529; }
+        .priority-low { background: #17a2b8; color: white; }
+        .filter-section {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        @media (max-width: 768px) {
+            .sidebar {
+                margin-left: -250px;
+            }
+            .main-content {
+                margin-left: 0;
+            }
+            .sidebar.active {
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 侧边栏 -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <i class="fas fa-bolt fa-2x mb-2"></i>
+            <h5>能源管理系统</h5>
+            <small>运维版</small>
+        </div>
+        <nav class="nav flex-column mt-3">
+
+
+            <a class="nav-link active" href="/operation/dashboard">
+                <i class="fas fa-tachometer-alt"></i> 仪表板
+            </a>
+            <a class="nav-link" href="/operation/work_orders">
+                <i class="fas fa-clipboard-list"></i> 工单管理
+                <span class="badge bg-danger float-end" id="pendingBadge">0</span>
+            </a>
+            <a class="nav-link" href="/operation/equipment">
+                <i class="fas fa-cogs"></i> 设备管理
+            </a>
+            <a class="nav-link" href="/operation/alerts">
+                <i class="fas fa-exclamation-triangle"></i> 告警管理
+                <span class="badge bg-danger float-end" id="alertBadge">0</span>
+            </a>
+            <a class="nav-link" href="/operation/profile">
+                <i class="fas fa-user-circle"></i> 个人中心
+            </a>
+            <div class="mt-auto">
+                <a class="nav-link text-danger" href="#" id="logoutBtn">
+                    <i class="fas fa-sign-out-alt"></i> 退出登录
+                </a>
+            </div>
+        </nav>
+    </div>
+
+    <!-- 主内容区 -->
+    <div class="main-content" id="mainContent">
+        <!-- 页面标题 -->
+        <div class="page-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2><i class="fas fa-exclamation-triangle me-2"></i>告警管理</h2>
+                    <p class="text-muted mb-0">实时监控和处理设备告警</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-primary" onclick="refreshAlerts()">
+                        <i class="fas fa-sync-alt"></i> 刷新
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 统计卡片 -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="stats-card text-center">
+                    <div class="stat-number text-danger" id="totalAlerts">0</div>
+                    <div class="stat-title">总告警数</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card text-center">
+                    <div class="stat-number text-warning" id="unprocessedAlerts">0</div>
+                    <div class="stat-title">未处理告警</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card text-center">
+                    <div class="stat-number text-primary" id="highPriorityAlerts">0</div>
+                    <div class="stat-title">高优先级告警</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card text-center">
+                    <div class="stat-number text-success" id="responseRate">0%</div>
+                    <div class="stat-title">响应率</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 筛选区域 -->
+        <div class="filter-section">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="mb-3">
+                        <label class="form-label">告警状态</label>
+                        <select class="form-select" id="statusFilter" onchange="filterAlerts()">
+                            <option value="all">全部状态</option>
+                            <option value="unprocessed">未处理</option>
+                            <option value="in-progress">处理中</option>
+                            <option value="processed">已处理</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="mb-3">
+                        <label class="form-label">告警等级</label>
+                        <select class="form-select" id="levelFilter" onchange="filterAlerts()">
+                            <option value="all">全部等级</option>
+                            <option value="高">高</option>
+                            <option value="中">中</option>
+                            <option value="低">低</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="mb-3">
+                        <label class="form-label">告警类型</label>
+                        <select class="form-select" id="typeFilter" onchange="filterAlerts()">
+                            <option value="all">全部类型</option>
+                            <option value="越限告警">越限告警</option>
+                            <option value="通讯故障">通讯故障</option>
+                            <option value="设备故障">设备故障</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="mb-3">
+                        <label class="form-label">时间范围</label>
+                        <input type="date" class="form-control" id="dateFilter" onchange="filterAlerts()">
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex justify-content-between">
+                <button class="btn btn-outline-secondary" onclick="resetFilters()">
+                    <i class="fas fa-redo"></i> 重置筛选
+                </button>
+                <div>
+                    <button class="btn btn-outline-warning" onclick="exportAlerts()">
+                        <i class="fas fa-download"></i> 导出
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 告警详情提示 -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="alert alert-info">
+                    <h6><i class="fas fa-info-circle me-2"></i>告警处理说明</h6>
+                    <ul class="mb-0">
+                        <li><strong>高等级告警</strong>：需要15分钟内响应并处理</li>
+                        <li><strong>中等级告警</strong>：需要在24小时内处理</li>
+                        <li><strong>低等级告警</strong>：需要在72小时内处理</li>
+                        <li>点击告警卡片可查看详细信息并进行处理</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- 告警列表 -->
+        <div id="alertsList">
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">加载中...</span>
+                </div>
+                <p class="mt-3">正在加载告警数据...</p>
+            </div>
+        </div>
+
+        <!-- 分页控件 -->
+        <nav id="paginationContainer" style="display: none;">
+            <ul class="pagination justify-content-center">
+                <!-- 分页按钮动态生成 -->
+            </ul>
+        </nav>
+    </div>
+
+    <!-- 告警详情模态框 -->
+    <div class="modal fade" id="alertDetailModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">告警详情</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">告警编号</label>
+                                <input type="text" class="form-control" id="detailAlertId" readonly>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">告警内容</label>
+                                <textarea class="form-control" id="detailAlertContent" rows="3" readonly></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">设备信息</label>
+                                <input type="text" class="form-control" id="detailEquipment" readonly>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">告警等级</label>
+                                <div id="detailAlertLevel"></div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">发生时间</label>
+                                <input type="text" class="form-control" id="detailOccurTime" readonly>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">处理状态</label>
+                                <div id="detailProcessStatus"></div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">确认信息</label>
+                                <input type="text" class="form-control" id="detailAcknowledgeInfo" readonly>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-3" id="detailWorkOrderInfo" style="display: none;">
+                        <h6>关联工单信息</h6>
+                        <div class="bg-light p-3 rounded">
+                            <div id="workOrderDetails"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                    <button type="button" class="btn btn-warning" id="btnAcknowledge" onclick="acknowledgeAlert()">
+                        <i class="fas fa-check-circle"></i> 确认告警
+                    </button>
+                    <button type="button" class="btn btn-primary" id="btnCreateWorkOrder" onclick="createWorkOrder()">
+                        <i class="fas fa-plus-circle"></i> 创建工单
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 调试信息模态框 -->
+    <div class="modal fade" id="debugModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">告警数据调试</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="debugContent"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // API基础URL
+        const API_BASE = '/api';
+
+        // 全局变量
+        let allAlerts = [];
+        let currentPage = 1;
+        const pageSize = 10;
+
+async function checkLogin() {
+    try {
+        const response = await fetch('/api/check-login', {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+                'Accept': 'application/json',
+                'Cache-Control': 'no-cache'
+            }
+        });
+
+        if (response.status === 401 || response.status === 403) {
+            console.log('用户未登录或会话过期，跳转到登录页');
+            window.location.href = '/login';
+            return null;
+        }
+
+        if (!response.ok) {
+            console.error(`检查登录状态失败，HTTP ${response.status}`);
+            // 不跳转，继续显示页面
+            return null;
+        }
+
+        const result = await response.json();
+
+        if (!result.success) {
+            console.warn('登录检查失败:', result.message);
+            // 不跳转，继续显示页面
+            return null;
+        }
+
+        console.log('✅ 登录状态检查通过');
+        return result.data;
+    } catch (error) {
+        console.error('登录检查错误:', error);
+
+        // 网络错误不跳转，继续显示页面
+        if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+            console.warn('网络错误，但继续显示页面');
+            return null;
+        }
+
+        // 其他错误也不跳转
+        return null;
+    }
+}
+
+
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            checkLogin();
+            loadAlerts();
+            // 每2分钟刷新告警列表
+            setInterval(loadAlerts, 120000);
+        });
+
+        // 退出登录
+        document.getElementById('logoutBtn').addEventListener('click', logout);
+
+        // async function loadAlerts() {
+        //     try {
+        //         const token = localStorage.getItem('token');
+        //         const status = document.getElementById('statusFilter').value;
+        //         const level = document.getElementById('levelFilter').value;
+        //         const type = document.getElementById('typeFilter').value;
+        //         const date = document.getElementById('dateFilter').value;
+        //
+        //         // 构建查询参数 - 修正状态值映射
+        //         let url = `${API_BASE}/alerts`;
+        //         const params = [];
+        //
+        //         // 状态映射：前端值 -> 后端期望值
+        //         const statusMapping = {
+        //             'all': '',
+        //             'unprocessed': '未处理',
+        //             'in-progress': '处理中',
+        //             'processed': '已结案'
+        //         };
+        //
+        //         if (status !== 'all') {
+        //             params.push(`status=${encodeURIComponent(statusMapping[status])}`);
+        //         }
+        //
+        //         if (level !== 'all') {
+        //             params.push(`level=${encodeURIComponent(level)}`);
+        //         }
+        //
+        //         if (type !== 'all') {
+        //             params.push(`device_type=${encodeURIComponent(type)}`);
+        //         }
+        //
+        //         if (date) {
+        //             params.push(`start_date=${date}`);
+        //         }
+        //
+        //         if (params.length > 0) {
+        //             url += '?' + params.join('&');
+        //         }
+        //
+        //         console.log(`🔍 请求URL: ${url}`);
+        //         console.log(`🔍 筛选条件 - 状态: ${status}, 映射为: ${statusMapping[status]}`);
+        //
+        //         const response = await fetch(url, {
+        //             headers: {
+        //                 'Authorization': token,
+        //                 'Content-Type': 'application/json'
+        //             }
+        //         });
+        //
+        //         if (response.status === 401) {
+        //             localStorage.clear();
+        //             window.location.href = 'index.html';
+        //             return;
+        //         }
+        //
+        //         if (!response.ok) {
+        //             throw new Error(`HTTP错误! 状态: ${response.status}`);
+        //         }
+        //
+        //         const result = await response.json();
+        //         console.log(`🔍 API响应:`, result);
+        //         console.log(`🔍 接口返回: ${result.success ? '成功' : '失败'}, 数据量: ${result.data?.length || 0}`);
+        //
+        //         if (result.success) {
+        //             allAlerts = result.data || [];
+        //             console.log(`✅ 获取到 ${allAlerts.length} 条告警`);
+        //
+        //             // 显示状态分布
+        //             const statusCount = {};
+        //             allAlerts.forEach(alert => {
+        //                 const status = alert.处理状态 || alert.状态 || '未知';
+        //                 statusCount[status] = (statusCount[status] || 0) + 1;
+        //             });
+        //             console.log('📊 状态分布:', statusCount);
+        //
+        //             // 渲染数据
+        //             renderAlerts();
+        //             updateStatistics();
+        //             updateBadgeCounts();
+        //         } else {
+        //             console.error('API返回失败:', result.message);
+        //             showError('加载告警失败: ' + (result.message || '未知错误'));
+        //         }
+        //     } catch (error) {
+        //         console.error('加载告警失败:', error);
+        //         showError('网络错误，请检查连接: ' + error.message);
+        //
+        //         // 如果API不可用，使用模拟数据（仅用于测试）
+        //         if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+        //             console.log('⚠️ API无法连接，使用模拟数据');
+        //             useMockData();
+        //         }
+        //     }
+        // }
+        async function loadAlerts() {
+    try {
+        const status = document.getElementById('statusFilter').value;
+        const level = document.getElementById('levelFilter').value;
+        const type = document.getElementById('typeFilter').value;
+        const date = document.getElementById('dateFilter').value;
+
+        // 构建查询参数
+        let url = `${API_BASE}/alerts`;
+        const params = [];
+
+        // 状态映射
+        const statusMapping = {
+            'all': '',
+            'unprocessed': '未处理',
+            'in-progress': '处理中',
+            'processed': '已结案'
+        };
+
+        if (status !== 'all') {
+            params.push(`status=${encodeURIComponent(statusMapping[status])}`);
+        }
+
+        if (level !== 'all') {
+            params.push(`level=${encodeURIComponent(level)}`);
+        }
+
+        if (type !== 'all') {
+            params.push(`device_type=${encodeURIComponent(type)}`);
+        }
+
+        if (date) {
+            params.push(`start_date=${date}`);
+        }
+
+        if (params.length > 0) {
+            url += '?' + params.join('&');
+        }
+
+        console.log(`🔍 请求告警数据: ${url}`);
+
+        // ✅ 重要：使用 credentials 而不是 token
+        const response = await fetch(url, {
+            method: 'GET',
+            credentials: 'include',  // 使用 session 认证
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+        });
+
+        // 处理认证错误
+        if (response.status === 401) {
+            console.warn('会话过期，需要重新登录');
+            // 给用户一个提示，然后跳转
+            showMessage('您的登录会话已过期，请重新登录', 'warning');
+            setTimeout(() => {
+                window.location.href = '/login';
+            }, 2000);
+            return;
+        }
+
+        if (response.status === 403) {
+            console.warn('权限不足');
+            showMessage('您没有权限访问告警数据', 'danger');
+            return;
+        }
+
+        if (!response.ok) {
+            // 对于非认证错误，不跳转页面
+            const errorText = await response.text();
+            console.error(`HTTP错误! 状态: ${response.status}, 响应: ${errorText}`);
+
+            // 根据错误类型显示不同信息
+            if (response.status >= 500) {
+                showMessage('服务器内部错误，请稍后重试', 'warning');
+            } else {
+                showMessage(`请求失败: ${response.status}`, 'danger');
+            }
+
+            // 使用模拟数据
+            useMockData();
+            return;
+        }
+
+        const result = await response.json();
+        console.log(`✅ API响应成功，数据量: ${result.data?.length || 0}`);
+
+        if (result.success) {
+            allAlerts = result.data || [];
+            console.log(`✅ 获取到 ${allAlerts.length} 条告警`);
+
+            // 渲染数据
+            renderAlerts();
+            updateStatistics();
+            updateBadgeCounts();
+        } else {
+            console.error('API返回失败:', result.message);
+            showMessage('加载告警失败: ' + (result.message || '未知错误'), 'warning');
+            // 失败时使用模拟数据
+            useMockData();
+        }
+    } catch (error) {
+        console.error('加载告警失败:', error);
+
+        // 根据不同错误类型处理
+        if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+            showMessage('网络连接异常，请检查网络后刷新页面', 'warning');
+            connectionErrors++;
+
+            // 如果连续多次网络错误，显示更强提示
+            if (connectionErrors >= MAX_CONNECTION_ERRORS) {
+                showMessage('网络连接不稳定，请检查网络连接', 'danger');
+            }
+        } else {
+            showMessage('加载告警数据失败: ' + error.message, 'danger');
+        }
+
+        // 使用模拟数据
+        useMockData();
+    }
+}
+
+// 健康检查
+function startHealthCheck() {
+    setInterval(async () => {
+        try {
+            const response = await fetch('/api/health', {
+                method: 'GET',
+                credentials: 'include',
+                timeout: 3000
+            });
+
+            if (response.ok) {
+                connectionErrors = 0;
+                const data = await response.json();
+                console.log('✅ 健康检查通过:', data.status);
+            } else {
+                connectionErrors++;
+                console.warn(`⚠️ 健康检查失败: HTTP ${response.status}`);
+            }
+        } catch (error) {
+            connectionErrors++;
+            console.error('健康检查错误:', error.message);
+        }
+    }, 60000); // 每1分钟检查一次
+}
+
+        // 模拟数据函数（仅用于测试）
+        function useMockData() {
+            const mockAlerts = [
+                {
+                    告警ID: "ALERT001",
+                    告警编号: "AL20250001",
+                    告警类型: "越限告警",
+                    告警等级: "高",
+                    告警内容: "35KV主变绕组温度超100℃",
+                    处理状态: "未处理",
+                    发生时间: "2025-03-15T10:30:00",
+                    确认时间: null,
+                    关联设备编号: "TR001",
+                    设备名称: "主变压器",
+                    厂区名称: "真旺厂"
+                },
+                {
+                    告警ID: "ALERT002",
+                    告警编号: "AL20250002",
+                    告警类型: "设备故障",
+                    告警等级: "中",
+                    告警内容: "光伏逆变器离线",
+                    处理状态: "处理中",
+                    发生时间: "2025-03-15T09:15:00",
+                    确认时间: "2025-03-15T09:20:00",
+                    关联设备编号: "PV001",
+                    设备名称: "光伏逆变器",
+                    厂区名称: "豆果厂"
+                },
+                {
+                    告警ID: "ALERT003",
+                    告警编号: "AL20250003",
+                    告警类型: "通讯故障",
+                    告警等级: "低",
+                    告警内容: "水表通讯中断",
+                    处理状态: "已结案",
+                    发生时间: "2025-03-14T14:45:00",
+                    确认时间: "2025-03-14T15:00:00",
+                    关联设备编号: "WT001",
+                    设备名称: "智能水表",
+                    厂区名称: "A3厂区"
+                }
+            ];
+
+            allAlerts = mockAlerts;
+            renderAlerts();
+            updateStatistics();
+            updateBadgeCounts();
+        }
+
+        function updateStatistics() {
+            if (!allAlerts || allAlerts.length === 0) {
+                document.getElementById('totalAlerts').textContent = '0';
+                document.getElementById('unprocessedAlerts').textContent = '0';
+                document.getElementById('highPriorityAlerts').textContent = '0';
+                document.getElementById('responseRate').textContent = '0%';
+                updateBadgeCounts();
+                return;
+            }
+
+            // 计算统计
+            const total = allAlerts.length;
+            const unprocessed = allAlerts.filter(a => {
+                const status = a.处理状态 || a.状态 || '';
+                return status === '未处理';
+            }).length;
+
+            const highPriority = allAlerts.filter(a => {
+                const level = a.告警等级 || '';
+                return level === '高';
+            }).length;
+
+            // 计算响应率（已确认或已处理的告警比例）
+            const responded = allAlerts.filter(a => {
+                const status = a.处理状态 || a.状态 || '';
+                const confirmed = a.确认时间 || a.告警确认时间;
+                return status === '已处理' || status === '已结案' || status === '处理中' || confirmed;
+            }).length;
+
+            const responseRate = total > 0 ? Math.round((responded / total) * 100) : 0;
+
+            // 更新显示
+            document.getElementById('totalAlerts').textContent = total;
+            document.getElementById('unprocessedAlerts').textContent = unprocessed;
+            document.getElementById('highPriorityAlerts').textContent = highPriority;
+            document.getElementById('responseRate').textContent = responseRate + '%';
+
+            // 更新徽章
+            updateBadgeCounts();
+        }
+
+        function analyzeAlert(alert) {
+            // 获取字段值 - 优先使用数据库字段名
+            const processStatus = alert.处理状态 || alert.状态 || '未处理';
+            const confirmTime = alert.确认时间 || alert.告警确认时间;
+            const workOrderNo = alert.关联工单编号 || alert.工单编号;
+
+            // 更准确的状态判断
+            const isUnprocessed = (processStatus === '未处理');
+            const isInProgress = (processStatus === '处理中');
+            const isProcessed = (processStatus === '已处理' || processStatus === '已结案' || processStatus === '已完成');
+
+            const hasConfirmed = (confirmTime && confirmTime.trim() !== '' && confirmTime !== 'null');
+            const hasWorkOrder = (workOrderNo && workOrderNo.trim() !== '' && workOrderNo !== 'null');
+
+            // 判断按钮显示逻辑
+            let canConfirm = false;
+            let canCreateWorkOrder = false;
+            let canViewWorkOrder = false;
+
+            if (isUnprocessed) {
+                if (!hasConfirmed) {
+                    // 未处理且未确认
+                    canConfirm = true;
+                    canCreateWorkOrder = true;
+                } else {
+                    // 未处理但已确认
+                    canViewWorkOrder = hasWorkOrder;
+                }
+            } else if (isInProgress) {
+                // 处理中状态
+                canViewWorkOrder = true;
+            } else if (isProcessed) {
+                // 已处理状态
+                canViewWorkOrder = true;
+            }
+
+            return {
+                canConfirm: canConfirm,
+                canCreateWorkOrder: canCreateWorkOrder,
+                canViewWorkOrder: canViewWorkOrder,
+                isUnprocessed: isUnprocessed,
+                isInProgress: isInProgress,
+                isProcessed: isProcessed,
+                hasConfirmed: hasConfirmed,
+                hasWorkOrder: hasWorkOrder,
+                status: processStatus
+            };
+        }
+
+        function createAlertCard(alert) {
+            // 分析告警状态
+            const analysis = analyzeAlert(alert);
+
+            // 确定优先级类名
+            const priorityClass = alert.告警等级 === '高' ? 'priority-high' :
+                                alert.告警等级 === '中' ? 'priority-medium' : 'priority-low';
+
+            // 确定状态类名和文本
+            const processStatus = alert.处理状态 || alert.状态 || '未处理';
+            let statusClass = 'status-unprocessed';
+            let statusText = '未处理';
+
+            if (processStatus === '已处理' || processStatus === '已结案' || processStatus === '已完成') {
+                statusClass = 'status-processed';
+                statusText = '已处理';
+            } else if (processStatus === '处理中') {
+                statusClass = 'status-in-progress';
+                statusText = '处理中';
+            } else if (alert.确认时间 || alert.告警确认时间) {
+                statusClass = 'status-acknowledged';
+                statusText = '已确认';
+            }
+
+            // 确定卡片类名
+            let cardClass = 'alert-card';
+            if (alert.告警等级 === '高') cardClass += ' high';
+            else if (alert.告警等级 === '中') cardClass += ' medium';
+            else cardClass += ' low';
+
+            if (analysis.isProcessed) cardClass += ' processed';
+
+            // 格式化时间
+            let occurTime = '未知时间';
+            let confirmTime = '未确认';
+
+            try {
+                occurTime = new Date(alert.发生时间).toLocaleString('zh-CN');
+                if (analysis.hasConfirmed) {
+                    confirmTime = new Date(alert.确认时间 || alert.告警确认时间).toLocaleString('zh-CN');
+                }
+            } catch (e) {
+                occurTime = alert.发生时间 || '未知时间';
+            }
+
+            return `
+            <div class="${cardClass}">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <div class="d-flex align-items-center mb-2">
+                            <h6 class="mb-0 me-2">${alert.告警编号 || '未知编号'}</h6>
+                            <span class="${priorityClass}">${alert.告警等级 || '未知'}优先级</span>
+                            <span class="alert-status ${statusClass} ms-2">${statusText}</span>
+                            ${alert.告警类型 ? `<span class="badge bg-info ms-2">${alert.告警类型}</span>` : ''}
+                        </div>
+                        <p class="mb-2">${alert.告警内容 || '无描述'}</p>
+                        <div class="text-muted small">
+                            <i class="fas fa-clock me-1"></i>发生时间：${occurTime} |
+                            <i class="fas fa-cog me-1"></i>设备：${alert.设备名称 || '未知'} |
+                            <i class="fas fa-industry me-1"></i>厂区：${alert.厂区名称 || '未指定'}
+                        </div>
+                        ${analysis.hasConfirmed ? `
+                        <div class="text-muted small mt-1">
+                            <i class="fas fa-user-check me-1"></i>确认时间：${confirmTime}
+                        </div>
+                        ` : ''}
+                        ${analysis.hasWorkOrder ? `
+                        <div class="text-muted small mt-1">
+                            <i class="fas fa-clipboard-list me-1"></i>关联工单：${alert.关联工单编号 || alert.工单编号}
+                        </div>
+                        ` : ''}
+                    </div>
+                    <div class="action-buttons">
+                        <button class="btn btn-sm btn-outline-info" onclick="viewAlertDetail('${alert.告警ID || alert.告警编号}')">
+                            <i class="fas fa-eye"></i> 详情
+                        </button>
+
+                        ${analysis.canConfirm ? `
+                        <button class="btn btn-sm btn-warning" onclick="acknowledgeAlert('${alert.告警ID || alert.告警编号}')">
+                            <i class="fas fa-check-circle"></i> 确认
+                        </button>
+                        ` : ''}
+
+                        ${analysis.canCreateWorkOrder ? `
+                        <button class="btn btn-sm btn-primary" onclick="createWorkOrderFromAlert('${alert.告警ID || alert.告警编号}')">
+                            <i class="fas fa-plus-circle"></i> 创建工单
+                        </button>
+                        ` : ''}
+
+                        ${analysis.canViewWorkOrder ? `
+                        <button class="btn btn-sm btn-success" onclick="viewWorkOrder('${alert.告警ID || alert.告警编号}')">
+                            <i class="fas fa-clipboard-list"></i> 查看工单
+                        </button>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>
+            `;
+        }
+
+        function renderAlerts() {
+            const container = document.getElementById('alertsList');
+
+            if (!allAlerts || allAlerts.length === 0) {
+                container.innerHTML = `
+                <div class="text-center py-5">
+                    <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                    <h4 class="text-success">一切正常</h4>
+                    <p class="text-muted">当前没有告警记录</p>
+                    <div class="mt-3">
+                        <button class="btn btn-outline-primary" onclick="refreshAlerts()">
+                            <i class="fas fa-sync-alt"></i> 刷新查看
+                        </button>
+                    </div>
+                </div>
+                `;
+                document.getElementById('paginationContainer').style.display = 'none';
+                return;
+            }
+
+            // 分页计算
+            const totalPages = Math.ceil(allAlerts.length / pageSize);
+            const startIndex = (currentPage - 1) * pageSize;
+            const endIndex = Math.min(startIndex + pageSize, allAlerts.length);
+            const pageAlerts = allAlerts.slice(startIndex, endIndex);
+
+            let html = '';
+            pageAlerts.forEach(alert => {
+                html += createAlertCard(alert);
+            });
+
+            container.innerHTML = html;
+            renderPagination(totalPages);
+        }
+
+        function renderPagination(totalPages) {
+            const container = document.getElementById('paginationContainer');
+            const ul = container.querySelector('.pagination');
+
+            if (totalPages <= 1) {
+                container.style.display = 'none';
+                return;
+            }
+
+            container.style.display = 'block';
+
+            let html = '';
+
+            // 上一页按钮
+            html += `
+            <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                <a class="page-link" href="#" onclick="changePage(${currentPage - 1})">
+                    <i class="fas fa-chevron-left"></i>
+                </a>
+            </li>
+            `;
+
+            // 页码按钮
+            for (let i = 1; i <= totalPages; i++) {
+                if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
+                    html += `
+                    <li class="page-item ${i === currentPage ? 'active' : ''}">
+                        <a class="page-link" href="#" onclick="changePage(${i})">${i}</a>
+                    </li>
+                    `;
+                } else if (i === currentPage - 3 || i === currentPage + 3) {
+                    html += '<li class="page-item disabled"><span class="page-link">...</span></li>';
+                }
+            }
+
+            // 下一页按钮
+            html += `
+            <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                <a class="page-link" href="#" onclick="changePage(${currentPage + 1})">
+                    <i class="fas fa-chevron-right"></i>
+                </a>
+            </li>
+            `;
+
+            ul.innerHTML = html;
+        }
+
+        function changePage(page) {
+            if (page < 1 || page > Math.ceil(allAlerts.length / pageSize)) return;
+            currentPage = page;
+            renderAlerts();
+            window.scrollTo(0, 0);
+        }
+
+        function filterAlerts() {
+            currentPage = 1;
+            loadAlerts();
+        }
+
+        function resetFilters() {
+            document.getElementById('statusFilter').value = 'all';
+            document.getElementById('levelFilter').value = 'all';
+            document.getElementById('typeFilter').value = 'all';
+            document.getElementById('dateFilter').value = '';
+            filterAlerts();
+        }
+
+        function viewAlertDetail(alertId) {
+            const alert = allAlerts.find(a => a.告警ID === alertId || a.告警编号 === alertId);
+            if (!alert) {
+                showMessage('未找到告警信息', 'warning');
+                return;
+            }
+
+            const analysis = analyzeAlert(alert);
+
+            // 填充详情数据
+            document.getElementById('detailAlertId').value = alert.告警编号 || '未知';
+            document.getElementById('detailAlertContent').value = alert.告警内容 || '无描述';
+            document.getElementById('detailEquipment').value = `${alert.设备名称 || '未知'} (${alert.设备类型 || '未分类'})`;
+
+            try {
+                document.getElementById('detailOccurTime').value = new Date(alert.发生时间).toLocaleString('zh-CN');
+            } catch (e) {
+                document.getElementById('detailOccurTime').value = alert.发生时间 || '未知';
+            }
+
+            // 告警等级
+            const levelDiv = document.getElementById('detailAlertLevel');
+            levelDiv.innerHTML = '';
+            const priorityClass = alert.告警等级 === '高' ? 'priority-high' :
+                                alert.告警等级 === '中' ? 'priority-medium' : 'priority-low';
+            levelDiv.innerHTML = `<span class="${priorityClass}">${alert.告警等级 || '未知'}优先级</span>`;
+
+            // 处理状态
+            const statusDiv = document.getElementById('detailProcessStatus');
+            let statusClass = 'status-unprocessed';
+            let statusText = '未处理';
+
+            const processStatus = alert.处理状态 || alert.状态 || '未处理';
+
+            if (processStatus === '已处理' || processStatus === '已结案' || processStatus === '已完成') {
+                statusClass = 'status-processed';
+                statusText = '已处理';
+            } else if (processStatus === '处理中') {
+                statusClass = 'status-in-progress';
+                statusText = '处理中';
+            } else if (alert.确认时间 || alert.告警确认时间) {
+                statusClass = 'status-acknowledged';
+                statusText = '已确认';
+            }
+
+            statusDiv.innerHTML = `<span class="alert-status ${statusClass}">${statusText}</span>`;
+
+            // 确认信息
+            if (analysis.hasConfirmed) {
+                try {
+                    const confirmTime = new Date(alert.确认时间 || alert.告警确认时间).toLocaleString('zh-CN');
+                    document.getElementById('detailAcknowledgeInfo').value = `确认时间: ${confirmTime}`;
+                } catch (e) {
+                    document.getElementById('detailAcknowledgeInfo').value = `已确认`;
+                }
+            } else {
+                document.getElementById('detailAcknowledgeInfo').value = '未确认';
+            }
+
+            // 关联工单信息
+            const workOrderSection = document.getElementById('detailWorkOrderInfo');
+            if (analysis.hasWorkOrder) {
+                workOrderSection.style.display = 'block';
+                document.getElementById('workOrderDetails').innerHTML = `
+                    <p><strong>工单编号:</strong> ${alert.关联工单编号 || alert.工单编号}</p>
+                    <p><a href="work_orders.html" class="btn btn-sm btn-outline-primary">前往工单管理查看详情</a></p>
+                `;
+            } else {
+                workOrderSection.style.display = 'none';
+            }
+
+            // 控制按钮显示
+            const btnAcknowledge = document.getElementById('btnAcknowledge');
+            const btnCreateWorkOrder = document.getElementById('btnCreateWorkOrder');
+
+            if (analysis.canConfirm) {
+                btnAcknowledge.style.display = 'inline-block';
+                btnAcknowledge.dataset.alertId = alert.告警ID || alertId;
+            } else {
+                btnAcknowledge.style.display = 'none';
+            }
+
+            if (analysis.canCreateWorkOrder) {
+                btnCreateWorkOrder.style.display = 'inline-block';
+                btnCreateWorkOrder.dataset.alertId = alert.告警ID || alertId;
+            } else {
+                btnCreateWorkOrder.style.display = 'none';
+            }
+
+            // 显示模态框
+            const modal = new bootstrap.Modal(document.getElementById('alertDetailModal'));
+            modal.show();
+        }
+
+        async function acknowledgeAlert(alertId) {
+    if (!alertId) {
+        alertId = document.getElementById('btnAcknowledge').dataset.alertId;
+    }
+
+    if (!alertId) {
+        showMessage('未指定告警ID', 'danger');
+        return;
+    }
+
+    if (!confirm('确认要标记此告警为已确认吗？')) return;
+
+    try {
+        const response = await fetch(`${API_BASE}/operation/alerts/${alertId}/create-work-order`, {
+            method: 'POST',
+            credentials: 'include',  // ✅ 使用 session
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            if (result.success) {
+                showMessage('告警确认成功', 'success');
+                const modal = bootstrap.Modal.getInstance(document.getElementById('alertDetailModal'));
+                if (modal) modal.hide();
+                loadAlertsWithRetry();
+            } else {
+                showMessage(result.message || '确认失败', 'danger');
+            }
+        } else {
+            showMessage('服务器错误: ' + response.status, 'danger');
+        }
+    } catch (error) {
+        console.error('确认告警失败:', error);
+        showMessage('网络错误，请重试', 'danger');
+    }
+}
+
+        async function createWorkOrderFromAlert(alertId) {
+    if (!confirm('确认要为此告警创建工单吗？')) return;
+
+    try {
+        const response = await fetch(`${API_BASE}/operation/alerts/${alertId}/create-work-order`, {
+            method: 'POST',
+            credentials: 'include',  // ✅ 使用 session
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            if (result.success) {
+                showMessage('工单创建成功', 'success');
+                setTimeout(() => {
+                    window.location.href = '/operation/work_orders';
+                }, 1500);
+            } else {
+                showMessage(result.message || '创建失败', 'danger');
+            }
+        } else {
+            showMessage('服务器错误: ' + response.status, 'danger');
+        }
+    } catch (error) {
+        console.error('创建工单失败:', error);
+        showMessage('网络错误，请重试', 'danger');
+    }
+}
+
+        function createWorkOrder() {
+            const alertId = document.getElementById('btnCreateWorkOrder').dataset.alertId;
+            if (alertId) {
+                createWorkOrderFromAlert(alertId);
+            }
+        }
+
+        function viewWorkOrder(alertId) {
+    // 获取告警信息
+    const alert = allAlerts.find(a => a.告警ID === alertId || a.告警编号 === alertId);
+
+    if (alert && (alert.工单ID || alert.关联工单ID || alert.告警ID)) {
+        // 如果有具体的工单ID，跳转到工单详情页
+        const workOrderId = alert.工单ID || alert.关联工单ID || alert.告警ID;
+        window.location.href = `/operation/work_orders?id=${workOrderId}`;
+    } else {
+        // 否则跳转到工单列表页
+        window.location.href = '/operation/work_orders';
+    }
+}
+
+        function refreshAlerts() {
+            loadAlerts();
+            showMessage('正在刷新告警数据...', 'info');
+        }
+
+        async function updateBadgeCounts() {
+            const unprocessed = allAlerts.filter(a => {
+                const status = a.处理状态 || a.状态 || '';
+                return status === '未处理';
+            }).length;
+
+            document.getElementById('alertBadge').textContent = unprocessed;
+        }
+
+        function exportAlerts() {
+            showMessage('导出功能开发中...', 'info');
+        }
+
+        function showDebugInfo() {
+            const debugContent = document.getElementById('debugContent');
+            let html = '<h5>告警数据分析</h5>';
+
+            if (!allAlerts || allAlerts.length === 0) {
+                html += '<p>没有告警数据</p>';
+            } else {
+                html += `<p>总共 ${allAlerts.length} 条告警记录</p>`;
+
+                // 状态统计
+                const statusCount = {};
+                allAlerts.forEach(alert => {
+                    const status = alert.处理状态 || alert.状态 || '未知';
+                    statusCount[status] = (statusCount[status] || 0) + 1;
+                });
+
+                html += '<h6>状态分布</h6><ul>';
+                for (const [status, count] of Object.entries(statusCount)) {
+                    html += `<li>${status}: ${count}条</li>`;
+                }
+                html += '</ul>';
+
+                html += '<table class="table table-bordered"><thead><tr>';
+                html += '<th>告警编号</th><th>处理状态</th><th>确认时间</th><th>关联工单</th><th>可确认</th><th>可创建工单</th><th>可查看工单</th></tr></thead><tbody>';
+
+                allAlerts.forEach(alert => {
+                    const analysis = analyzeAlert(alert);
+                    html += `<tr>
+                        <td>${alert.告警编号}</td>
+                        <td>${analysis.status}</td>
+                        <td>${alert.确认时间 || 'null'}</td>
+                        <td>${alert.关联工单编号 || 'null'}</td>
+                        <td class="${analysis.canConfirm ? 'text-success' : 'text-danger'}">${analysis.canConfirm ? '是' : '否'}</td>
+                        <td class="${analysis.canCreateWorkOrder ? 'text-success' : 'text-danger'}">${analysis.canCreateWorkOrder ? '是' : '否'}</td>
+                        <td class="${analysis.canViewWorkOrder ? 'text-success' : 'text-danger'}">${analysis.canViewWorkOrder ? '是' : '否'}</td>
+                    </tr>`;
+                });
+
+                html += '</tbody></table>';
+            }
+
+            debugContent.innerHTML = html;
+            const modal = new bootstrap.Modal(document.getElementById('debugModal'));
+            modal.show();
+        }
+
+        async function logout() {
+            try {
+                const token = localStorage.getItem('token');
+                await fetch(`${API_BASE}/logout`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': token,
+                        'Content-Type': 'application/json'
+                    }
+                });
+            } catch (error) {
+                console.error('退出登录失败:', error);
+            } finally {
+                localStorage.clear();
+                window.location.href = '/login';
+            }
+        }
+
+        function showMessage(message, type = 'info') {
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+            alert.style.cssText = `
+                top: 20px;
+                right: 20px;
+                z-index: 9999;
+                min-width: 300px;
+            `;
+            alert.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check' : 'info'}-circle me-2"></i>
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+
+            document.body.appendChild(alert);
+
+            setTimeout(() => {
+                alert.remove();
+            }, 5000);
+        }
+
+        function showError(message) {
+            const container = document.getElementById('alertsList');
+            container.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                ${message}
+                <button class="btn btn-sm btn-outline-danger float-end" onclick="loadAlerts()">
+                    重试
+                </button>
+            </div>
+            `;
+        }
+
+        // 键盘快捷键
+        document.addEventListener('DOMContentLoaded', async function() {
+    try {
+        // 先尝试检查登录状态
+        const user = await checkLogin();
+
+        if (user) {
+            console.log('用户已登录:', user);
+        } else {
+            console.log('⚠️ 登录状态检查失败，但继续加载页面');
+        }
+
+        // 加载告警数据（使用重试机制）
+        await loadAlertsWithRetry();
+
+        // 启动健康检查
+        startHealthCheck();
+
+        // 每2分钟刷新告警列表
+        setInterval(() => {
+            loadAlertsWithRetry(2); // 刷新时重试2次
+        }, 120000);
+
+        // 设置错误处理
+        setupErrorHandlers();
+    } catch (error) {
+        console.error('页面初始化失败:', error);
+        // 显示错误信息，但不重定向
+        showMessage('页面初始化失败，请刷新重试', 'warning');
+    }
+});
+
+        async function loadAlertsWithRetry(maxRetries = 3) {
+    let lastError;
+
+    for (let i = 0; i < maxRetries; i++) {
+        try {
+            await loadAlerts();
+            return; // 成功则返回
+        } catch (error) {
+            lastError = error;
+            console.log(`加载告警失败，尝试 ${i + 1}/${maxRetries}:`, error);
+
+            if (i < maxRetries - 1) {
+                // 指数退避
+                const delay = 1000 * Math.pow(2, i);
+                console.log(`等待 ${delay}ms 后重试`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+            }
+        }
+    }
+
+    // 所有重试都失败
+    console.error('所有重试都失败:', lastError);
+    throw lastError;
+}
+
+
+        // 通用函数 - 更新告警徽章（其他页面需要）
+        async function updateAlertBadge() {
+            try {
+                const token = localStorage.getItem('token');
+
+                // 获取未处理的告警数量
+                const response = await fetch(`${API_BASE}/alert-badge`, {
+                    headers: { 'Authorization': token }
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    const count = result.count || 0;
+
+                    // 更新所有页面中的告警徽章
+                    const badges = document.querySelectorAll('#alertBadge, .alert-badge');
+                    badges.forEach(badge => {
+                        badge.textContent = count;
+                        badge.style.display = count > 0 ? 'inline' : 'none';
+                    });
+
+                    return count;
+                }
+                return 0;
+            } catch (error) {
+                console.error('更新告警徽章失败:', error);
+                return 0;
+            }
+        }
+        // 在页面加载完成后，添加这个函数
+function setupErrorHandlers() {
+    console.log('✅ 设置错误处理器');
+
+    // 捕获未处理的Promise错误
+    window.addEventListener('unhandledrejection', function(event) {
+        console.error('未处理的Promise错误:', event.reason);
+        showMessage('系统错误: ' + (event.reason?.message || '未知错误'), 'danger');
+    });
+
+    // 捕获未处理的JS错误
+    window.addEventListener('error', function(event) {
+        console.error('JavaScript错误:', event.error);
+        showMessage('脚本错误: ' + (event.error?.message || '未知错误'), 'warning');
+    });
+
+    // 网络连接状态监听
+    window.addEventListener('offline', function() {
+        console.warn('网络连接断开');
+        showMessage('网络连接已断开，部分功能可能不可用', 'warning');
+    });
+
+    window.addEventListener('online', function() {
+        console.log('网络连接恢复');
+        showMessage('网络连接已恢复', 'success');
+        // 网络恢复后自动刷新数据
+        setTimeout(() => loadAlertsWithRetry(), 1000);
+    });
+
+    // 页面可见性监听
+    document.addEventListener('visibilitychange', function() {
+        if (!document.hidden) {
+            console.log('页面恢复显示，刷新数据');
+            loadAlertsWithRetry(1);
+        }
+    });
+}
+    </script>
+</body>
+</html>

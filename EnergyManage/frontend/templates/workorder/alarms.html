@@ -1,0 +1,514 @@
+{% extends "workorder/base.html" %}
+
+{% block title %}告警管理 - 智慧能源管理系统{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h2><i class="fas fa-exclamation-triangle me-2"></i> 告警管理</h2>
+            <div>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#filterModal">
+                    <i class="fas fa-filter me-2"></i> 筛选
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 统计摘要 -->
+<div class="row mb-4">
+    {% for stat in alarm_stats %}
+    <div class="col-md-3 col-6 mb-3">
+        <div class="card shadow-sm">
+            <div class="card-body p-3">
+                <h6 class="card-subtitle mb-2 text-muted">{{ stat.告警类型 }} - {{ stat.告警等级 }}</h6>
+                <h4 class="card-title">{{ stat.count }}</h4>
+                <span class="badge 
+                    {% if stat.处理状态 == '未处理' %}bg-danger
+                    {% elif stat.处理状态 == '处理中' %}bg-warning
+                    {% else %}bg-success{% endif %}">
+                    {{ stat.处理状态 }}
+                </span>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- 告警列表 -->
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">告警列表</h5>
+                <span class="badge bg-primary">共 {{ alarms|length }} 条记录</span>
+            </div>
+            <div class="card-body">
+                {% if alarms %}
+                <div class="table-responsive">
+                    <table class="table table-hover" id="alarmsTable">
+                        <thead>
+                            <tr>
+                                <th>选择</th>
+                                <th>告警编号</th>
+                                <th>类型</th>
+                                <th>等级</th>
+                                <th>设备名称</th>
+                                <th>厂区</th>
+                                <th>发生时间</th>
+                                <th>状态</th>
+                                <th>时间间隔</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for alarm in alarms %}
+                            <tr class="{% if alarm.处理状态 == '未处理' and alarm.告警等级 == '高' %}table-danger
+                                      {% elif alarm.处理状态 == '未处理' and alarm.告警等级 == '中' %}table-warning
+                                      {% endif %}">
+                                <td>
+                                    <input type="checkbox" class="alarm-checkbox" value="{{ alarm.告警ID }}">
+                                </td>
+                                <td>{{ alarm.告警编号 }}</td>
+                                <td>{{ alarm.告警类型 }}</td>
+                                <td>
+                                    {% if alarm.告警等级 == '高' %}
+                                    <span class="badge bg-danger">高</span>
+                                    {% elif alarm.告警等级 == '中' %}
+                                    <span class="badge bg-warning text-dark">中</span>
+                                    {% else %}
+                                    <span class="badge bg-info">低</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ alarm.设备名称 or 'N/A' }}</td>
+                                <td>{{ alarm.厂区名称 or 'N/A' }}</td>
+                                <td>{{ alarm.发生时间.strftime('%m-%d %H:%M') if alarm.发生时间 else 'N/A' }}</td>
+                                <td>
+                                    {% if alarm.处理状态 == '未处理' %}
+                                    <span class="badge bg-danger">未处理</span>
+                                    {% elif alarm.处理状态 == '待审核' %}
+                                    <span class="badge bg-danger">待审核</span>
+                                    {% elif alarm.处理状态 == '待决策' %}
+                                    <span class="badge bg-danger">待决策</span>
+                                    {% elif alarm.处理状态 == '处理中' %}
+                                    <span class="badge bg-warning text-dark">处理中</span>
+                                    {% else %}
+                                    <span class="badge bg-success">已结案</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ alarm.时间间隔 }}</td>
+                                <!-- 在告警列表的操作按钮部分修改 -->
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <!-- 查看详情按钮始终显示 -->
+                                        <a href="{{ url_for('workorder_alarm_detail', alarm_id=alarm.告警ID) }}"
+                                        class="btn btn-outline-primary" title="查看详情">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        
+                                        {% if alarm.处理状态 == '待审核' %}
+                                            <!-- 待审核的告警：显示标记误报和确认告警按钮 -->
+                                            <button class="btn btn-outline-danger mark-false-alarm" 
+                                                    data-alarm-id="{{ alarm.告警ID }}" title="标记误报">
+                                                <i class="fas fa-times-circle"></i>
+                                            </button>
+                                            <button class="btn btn-outline-success confirm-alarm" 
+                                                    data-alarm-id="{{ alarm.告警ID }}" title="确认告警">
+                                                <i class="fas fa-check-circle"></i>
+                                            </button>
+                                            
+                                        {% elif alarm.处理状态 == '未处理' %}
+                                            <!-- 未处理的告警：显示标记误报和创建工单按钮 -->
+                                            <button class="btn btn-outline-warning create-work-order" 
+                                                    data-alarm-id="{{ alarm.告警ID }}"
+                                                    data-alarm-content="{{ alarm.告警内容 }}"
+                                                    title="创建工单">
+                                                <i class="fas fa-plus-circle"></i>
+                                            </button>
+                                            
+                                        {% elif alarm.处理状态 == '待决策' %}
+                                            <!-- 待决策的告警：只能查看详情，无其他操作 -->
+                                            <button class="btn btn-outline-secondary" disabled title="待决策状态，仅可查看">
+                                                <i class="fas fa-hourglass-half"></i>
+                                            </button>
+                                            
+                                        {% elif alarm.处理状态 == '处理中' %}
+                                            <!-- 处理中的告警：显示状态标签 -->
+                                            <span class="badge bg-primary">处理中</span>
+                                            
+                                        {% elif alarm.处理状态 == '已结案' %}
+                                            <!-- 已结案的告警：显示状态标签 -->
+                                            <span class="badge bg-success">已结案</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- 批量操作 -->
+                <div class="mt-3" id="batchActions" style="display: none;">
+                    <div class="card">
+                        <div class="card-body">
+                            <h6>批量操作</h6>
+                            <div class="btn-group">
+                                <button class="btn btn-sm btn-outline-danger" id="batchMarkFalse">
+                                    <i class="fas fa-times-circle me-2"></i>批量标记误报
+                                </button>
+                                <button class="btn btn-sm btn-outline-warning" id="batchCreateOrders">
+                                    <i class="fas fa-plus-circle me-2"></i>批量创建工单
+                                </button>
+                            </div>
+                            <span class="ms-3 text-muted" id="selectedCount">已选择 0 条记录</span>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                    <h5 class="text-muted">暂无告警信息</h5>
+                    <p class="text-muted">当前筛选条件下没有找到告警记录</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 筛选模态框 -->
+<div class="modal fade" id="filterModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">筛选条件</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="GET" action="{{ url_for('workorder_alarms') }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">处理状态</label>
+                        <select class="form-select" name="status">
+                            <option value="all" {% if current_filters.status == 'all' %}selected{% endif %}>全部状态</option>
+                            <option value="待审核" {% if current_filters.status == '待审核' %}selected{% endif %}>待审核</option>
+                            <option value="待决策" {% if current_filters.status == '待决策' %}selected{% endif %}>待决策</option>
+                            <option value="未处理" {% if current_filters.status == '未处理' %}selected{% endif %}>未处理</option>
+                            <option value="处理中" {% if current_filters.status == '处理中' %}selected{% endif %}>处理中</option>
+                            <option value="已结案" {% if current_filters.status == '已结案' %}selected{% endif %}>已结案</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">告警类型</label>
+                        <select class="form-select" name="type">
+                            <option value="all" {% if current_filters.type == 'all' %}selected{% endif %}>全部类型</option>
+                            <option value="越限告警" {% if current_filters.type == '越限告警' %}selected{% endif %}>越限告警</option>
+                            <option value="通讯故障" {% if current_filters.type == '通讯故障' %}selected{% endif %}>通讯故障</option>
+                            <option value="设备故障" {% if current_filters.type == '设备故障' %}selected{% endif %}>设备故障</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">告警等级</label>
+                        <select class="form-select" name="priority">
+                            <option value="all" {% if current_filters.priority == 'all' %}selected{% endif %}>全部等级</option>
+                            <option value="高" {% if current_filters.priority == '高' %}selected{% endif %}>高</option>
+                            <option value="中" {% if current_filters.priority == '中' %}selected{% endif %}>中</option>
+                            <option value="低" {% if current_filters.priority == '低' %}selected{% endif %}>低</option>
+                        </select>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">开始日期</label>
+                            <input type="date" class="form-control" name="start_date" 
+                                   value="{{ current_filters.start_date or '' }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">结束日期</label>
+                            <input type="date" class="form-control" name="end_date"
+                                   value="{{ current_filters.end_date or '' }}">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary">应用筛选</button>
+                    <a href="{{ url_for('workorder_alarms') }}" class="btn btn-outline-danger">清除筛选</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 修改创建工单模态框 -->
+<div class="modal fade" id="createWorkOrderModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">创建运维工单</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="createWorkOrderForm">
+                <div class="modal-body">
+                    <input type="hidden" id="modalAlarmId">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">告警内容</label>
+                        <textarea class="form-control" id="modalAlarmContent" rows="2" readonly></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">运维人员 <span class="text-danger">*</span></label>
+                        <select class="form-select" id="modalOperatorId" required>
+                            <option value="">请选择运维人员</option>
+                            {% for operator in operators %}
+                            <option value="{{ operator.用户ID }}">{{ operator.真实姓名 }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <!-- 移除优先级、工单描述、截止时间字段 -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary">创建工单</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 标记误报模态框 -->
+<div class="modal fade" id="markFalseAlarmModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">标记误报</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="markFalseAlarmForm">
+                <div class="modal-body">
+                    <input type="hidden" id="falseAlarmId">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">误报原因</label>
+                        <select class="form-select" id="falseAlarmReason">
+                            <option value="通讯波动导致误报">通讯波动导致误报</option>
+                            <option value="数据采集异常">数据采集异常</option>
+                            <option value="阈值设置不当">阈值设置不当</option>
+                            <option value="设备自检误报">设备自检误报</option>
+                            <option value="其他原因">其他原因</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">详细说明</label>
+                        <textarea class="form-control" id="falseAlarmDetail" rows="3" 
+                                  placeholder="请详细说明误报原因..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-danger">确认标记为误报</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    const today = new Date().toISOString().split('T')[0];
+    $('#modalDeadline').val(today);
+    
+    // 单个复选框选择
+    $('.alarm-checkbox').change(function() {
+        const checkedCount = $('.alarm-checkbox:checked').length;
+        if (checkedCount > 0) {
+            $('#batchActions').show();
+            $('#selectedCount').text(`已选择 ${checkedCount} 条记录`);
+        } else {
+            $('#batchActions').hide();
+        }
+    });
+    
+    // 全选
+    $('#selectAll').change(function() {
+        $('.alarm-checkbox').prop('checked', this.checked);
+        $('.alarm-checkbox').trigger('change');
+    });
+    
+    $(document).on('click', '.confirm-alarm', function() {
+        const alarmId = $(this).data('alarm-id');
+        
+        if (confirm('确认要审核通过这条告警吗？系统将根据告警类型自动设置处理状态。')) {
+            $.ajax({
+                url: '/api/workorder/confirm_alarm',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    alarm_id: alarmId
+                }),
+                success: function(response) {
+                    if (response.success) {
+                        alert(response.message);
+                        location.reload(); // 刷新页面
+                    } else {
+                        alert('操作失败：' + response.message);
+                    }
+                },
+                error: function() {
+                    alert('请求失败，请检查网络连接');
+                }
+            });
+        }
+    });
+
+    // 标记误报
+    $(document).on('click', '.mark-false-alarm', function() {
+        const alarmId = $(this).data('alarm-id');
+        const row = $(this).closest('tr');
+        const status = row.find('td:nth-child(8)').text().trim();
+        
+        // 检查是否为"待审核"状态
+        if (status !== '待审核') {
+            alert('只能标记"待审核"状态的告警为误报');
+            return;
+        }
+        
+        $('#falseAlarmId').val(alarmId);
+        $('#markFalseAlarmModal').modal('show');
+    });
+    
+    $('#markFalseAlarmForm').submit(function(e) {
+        e.preventDefault();
+        
+        const alarmId = $('#falseAlarmId').val();
+        const reason = $('#falseAlarmReason').val();
+        const detail = $('#falseAlarmDetail').val();
+        const finalReason = detail ? `${reason}：${detail}` : reason;
+        
+        $.ajax({
+            url: '/api/workorder/mark_false_alarm',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                alarm_id: alarmId,
+                reason: finalReason
+            }),
+            success: function(response) {
+                if (response.success) {
+                    alert('已标记为误报');
+                    location.reload();
+                } else {
+                    alert('操作失败：' + response.message);
+                }
+            },
+            error: function() {
+                alert('请求失败，请检查网络连接');
+            }
+        });
+    });
+    
+    // 创建工单
+    $(document).on('click', '.create-work-order', function() {
+        const alarmId = $(this).data('alarm-id');
+        const alarmContent = $(this).data('alarm-content');
+        const row = $(this).closest('tr');
+        const status = row.find('td:nth-child(8)').text().trim();
+        
+        // 检查是否为"未处理"状态
+        if (status !== '未处理') {
+            alert('只能为"未处理"状态的告警创建工单');
+            return;
+        }
+        
+        $('#modalAlarmId').val(alarmId);
+        $('#modalAlarmContent').val(alarmContent);
+        $('#createWorkOrderModal').modal('show');
+    });
+    
+    // 修改创建工单的提交逻辑
+    $('#createWorkOrderForm').submit(function(e) {
+        e.preventDefault();
+        
+        const alarmId = $('#modalAlarmId').val();
+        const operatorId = $('#modalOperatorId').val();
+        
+        // 只验证运维人员是否选择
+        if (!operatorId) {
+            alert('请选择运维人员');
+            return;
+        }
+        
+        $.ajax({
+            url: '/api/workorder/create_work_order',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                alarm_id: alarmId,
+                operator_id: operatorId
+                // 移除其他字段
+            }),
+            success: function(response) {
+                if (response.success) {
+                    alert('工单创建成功！工单号：' + response.work_order_id);
+                    location.reload();
+                } else {
+                    alert('创建失败：' + response.message);
+                }
+            },
+            error: function() {
+                alert('请求失败，请检查网络连接');
+            }
+        });
+    });
+    
+    // 批量操作
+    $('#batchMarkFalse').click(function() {
+        const selectedAlarms = [];
+        $('.alarm-checkbox:checked').each(function() {
+            selectedAlarms.push($(this).val());
+        });
+        
+        if (selectedAlarms.length === 0) {
+            alert('请先选择要操作的告警');
+            return;
+        }
+        
+        if (confirm(`确定要将选中的 ${selectedAlarms.length} 条告警标记为误报吗？`)) {
+            // 这里可以实现批量标记误报的逻辑
+            alert('批量操作功能待实现');
+        }
+    });
+    
+    $('#batchCreateOrders').click(function() {
+        const selectedAlarms = [];
+        $('.alarm-checkbox:checked').each(function() {
+            selectedAlarms.push($(this).val());
+        });
+        
+        if (selectedAlarms.length === 0) {
+            alert('请先选择要操作的告警');
+            return;
+        }
+        
+        if (selectedAlarms.length > 1) {
+            alert('批量创建工单功能暂不支持多选，请单个创建');
+            return;
+        }
+        
+        // 自动触发第一个选中告警的创建工单操作
+        const firstAlarmId = selectedAlarms[0];
+        $(`button.create-work-order[data-alarm-id="${firstAlarmId}"]`).click();
+    });
+
+
+});
+</script>
+{% endblock %}
